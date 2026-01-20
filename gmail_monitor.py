@@ -10,6 +10,7 @@ import json
 import pickle
 from datetime import datetime
 from pathlib import Path
+from html import escape
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -98,17 +99,28 @@ class GmailMonitor:
     def make_phone_call(self, email_info):
         """Make a phone call via Twilio"""
         try:
+            # Extract sender name from email address (before @)
+            sender_email = email_info['from']
+            if '<' in sender_email:
+                # Handle format: "Name <email@example.com>"
+                sender_email = sender_email.split('<')[1].split('>')[0]
+            sender_name = sender_email.split('@')[0].replace('.', ' ')
+
+            # Escape XML special characters for safety
+            escaped_message = escape(CALL_MESSAGE)
+            escaped_subject = escape(email_info['subject'][:100])  # Limit length
+
             # Create TwiML for the call message
             twiml = f'''<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">{CALL_MESSAGE}</Say>
+    <Say voice="alice">{escaped_message}</Say>
     <Pause length="1"/>
-    <Say voice="alice">From: {email_info['from']}</Say>
-    <Say voice="alice">Subject: {email_info['subject']}</Say>
-    <Pause length="1"/>
-    <Say voice="alice">This message will repeat.</Say>
+    <Say voice="alice">Sender: {escape(sender_name)}</Say>
+    <Say voice="alice">Subject: {escaped_subject}</Say>
     <Pause length="2"/>
-    <Say voice="alice">{CALL_MESSAGE}</Say>
+    <Say voice="alice">I repeat: {escaped_message}</Say>
+    <Pause length="1"/>
+    <Say voice="alice">Please check your email immediately.</Say>
 </Response>'''
 
             call = self.twilio_client.calls.create(
