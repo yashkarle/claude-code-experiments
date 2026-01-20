@@ -183,7 +183,7 @@ class GmailMonitor:
                     email_info = self.get_email_details(msg_id)
                     if email_info:
                         new_emails.append(email_info)
-                        self.notified_emails.add(msg_id)
+                        # NOTE: Don't mark as notified yet - only after successful call
 
             return new_emails
 
@@ -209,11 +209,14 @@ class GmailMonitor:
 
             if success:
                 print("✓ Notification sent successfully!")
+                # Only mark as notified after successful call
+                self.notified_emails.add(email['id'])
+                self.save_notified_emails()
+                print(f"  Email ID {email['id']} marked as notified")
             else:
                 print("✗ Failed to send notification")
-
-            # Save updated notified emails list
-            self.save_notified_emails()
+                print("  Email will be retried on next check cycle")
+                # Don't mark as notified - allow retry on next iteration
 
     def run(self):
         """Main monitoring loop"""
