@@ -415,6 +415,89 @@ li.completed .step-indicator {
   background: var(--accent);
 }
 
+#step-criteria ul li.criteria-critical::before {
+  background: var(--danger);
+}
+
+.critical-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: white;
+  background: var(--danger);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+
+#step-mistakes ul li::before {
+  background: var(--danger);
+  opacity: 0.6;
+}
+
+/* Step meta (phase + duration) */
+.step-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.phase-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+}
+
+.duration-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-light);
+  background: var(--bg);
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+/* Phase headers in step nav */
+.phase-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 0.6rem 0.5rem 0.2rem !important;
+  margin-top: 0.5rem;
+  border-left: none !important;
+  cursor: default !important;
+  opacity: 0.8;
+}
+
+.phase-header:hover {
+  background: transparent !important;
+}
+
+/* Step nav duration badge */
+.step-nav-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-duration {
+  font-size: 0.65rem;
+  color: var(--text-light);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* === Measurements === */
 .measurements-grid {
   display: grid;
@@ -433,6 +516,15 @@ li.completed .step-indicator {
 .measurement-card.highlight {
   border-color: var(--primary);
   background: var(--primary-light);
+}
+
+.measurement-card.danger {
+  border-color: var(--danger);
+  background: #ffeaea;
+}
+
+.measurement-card.danger .measurement-value {
+  color: var(--danger);
 }
 
 .measurement-value {
