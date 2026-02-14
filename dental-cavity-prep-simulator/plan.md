@@ -61,6 +61,30 @@ The IDC uses a **4-grade scale** across two bands:
 - Occlusal portion should **extend as far as the transverse ridge but not break it**
 - **No beveling** for composite (butt joint)
 
+### Golden Reference: IDC Cavity Outline Images (Page 2 of IDC slides)
+
+The IDC slides include 4 reference photographs of a maxillary first molar Class II prep (silhouette overlays + typodont photos) showing both the **proximal box view** and **occlusal view**. These are the gold standard for what the examiner expects to see. Our SVG visualizations must match these outlines.
+
+**Occlusal outline (top-down):**
+- **Keyhole / T-shape**: narrow occlusal isthmus extending mesially along the central fissure, stopping cleanly at the transverse ridge (no crossover), with a wider buccolingual flare at the distal where the proximal box opens
+- **Isthmus is very narrow** — the photos show approximately one bur width, at the most conservative end of the "max 1/3 intercuspal" guideline
+- **Distal flare is subtle** — the T-shape arms (buccal and lingual extensions at the proximal box opening) are conservative, not wide wings
+- **Outline is smooth and continuous** — no jagged edges or irregular extensions
+- **The prep does NOT cross the transverse ridge** — it terminates right at it
+
+**Proximal box outline (side view):**
+- **Distinct "step" shape** — the proximal box drops significantly deeper than the occlusal floor, forming a clear step at the axiopulpal line angle
+- **Rectangular box profile** — the proximal box has relatively parallel buccal and lingual walls (with slight occlusal divergence) and a flat gingival seat at the bottom
+- **The gingival seat is flat** and perpendicular to the long axis of the tooth
+- **Box extends just beyond the contact area** — clearing the adjacent tooth but not over-extended
+- **Smooth walls** — no ledges or irregularities visible in the typodont photos
+
+**SVG implementation implications:**
+- The occlusal view SVG must show the narrow keyhole/T-shape with conservative isthmus (one bur width), NOT a wide preparation
+- The proximal view SVG must show the distinct step between occlusal floor and proximal box floor — this "step" shape is fundamental to the prep identity
+- The final verification step (Step 16) overlay should show the complete outline matching these IDC reference shapes so candidates can compare their mental model against the gold standard
+- Consider adding an "IDC Reference Outline" toggle that overlays the ideal outline shape on the SVG at any step, so candidates always know what they're aiming for
+
 ### Matrix Systems (from IDC slides)
 
 - **Sectional matrix** (V Ring / Palodent) — dedicated anatomical wedge + sectional matrix + holding ring; ring provides separation compensating for matrix thickness; more predictable proximal contour
