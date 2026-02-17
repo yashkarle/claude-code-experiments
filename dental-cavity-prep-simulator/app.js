@@ -16,15 +16,15 @@
       title: 'Rubber Dam Isolation & Protection',
       phase: 'Pre-Procedure',
       duration: '2-3 min',
-      description: `<p>Begin by selecting an appropriate clamp for the upper premolar. For most upper premolars, a Wingless W8A (Ivory) or a 206 (Ash) clamp works well. Test the clamp on the tooth before placing the dam to ensure it seats firmly below the height of contour on all four line angles without rocking. The clamp must be stable &mdash; any rocking or displacement during the procedure will cost marks on the IDC Rubber Dam Criteria Sheet.</p>
-<p>Punch holes for the teeth you plan to isolate. For a DO preparation on an upper premolar, isolate at minimum the tooth being prepared and one tooth either side (typically premolar-to-premolar or premolar-to-molar). The IDC marking sheet specifically assesses whether an &ldquo;appropriate number of teeth&rdquo; have been isolated. Punch the holes using the correct punch size &mdash; use the premolar setting for premolars and the molar setting if you include a molar. Space the holes according to the arch form.</p>
+      description: `<p>Begin by selecting an appropriate clamp for the upper molar. For most upper molars, a Wingless W8A (Ivory) or 14A (Ash) clamp works well. Test the clamp on the tooth before placing the dam to ensure it seats firmly below the height of contour on all four line angles without rocking. The clamp must be stable &mdash; any rocking or displacement during the procedure will cost marks on the IDC Rubber Dam Criteria Sheet.</p>
+<p>Punch holes for the teeth you plan to isolate. For a DO preparation on an upper molar, isolate at minimum the tooth being prepared and one tooth either side (typically the molar and at least one tooth either side). The IDC marking sheet specifically assesses whether an &ldquo;appropriate number of teeth&rdquo; have been isolated. Punch the holes using the correct punch size &mdash; use the molar setting. Space the holes according to the arch form.</p>
 <p>Place the dam using your preferred technique (wing or wingless). Once seated, evert the dam around the necks of all isolated teeth using a flat plastic instrument and floss. Eversion is a specific criterion on the IDC Rubber Dam Criteria Sheet &mdash; the dam must be tucked into the gingival sulcus to create a seal. If the dam is not everted, it will pool saliva and obscure the operating field, and you will lose marks.</p>
-<p>Verify that the dam is intact with no tears. A torn dam is marked as a deficiency. Ensure the dam provides clear visibility and access to the distal surface of the premolar. Place a protective matrix band (e.g., a Tofflemire band or sectional matrix) on the adjacent tooth distally to prevent inadvertent damage during preparation. The IDC grades adjacent tooth damage harshly: &ldquo;damaged&rdquo; = B grade; &ldquo;mutilated&rdquo; = automatic F.</p>
+<p>Verify that the dam is intact with no tears. A torn dam is marked as a deficiency. Ensure the dam provides clear visibility and access to the distal surface of the molar. Place a protective matrix band (e.g., a Tofflemire band or sectional matrix) on the adjacent tooth distally to prevent inadvertent damage during preparation. The IDC grades adjacent tooth damage harshly: &ldquo;damaged&rdquo; = B grade; &ldquo;mutilated&rdquo; = automatic F.</p>
 <p>Confirm that your high-speed handpiece water spray is functioning. The IDC mandates that all cutting with the high-speed handpiece must be done with water coolant. Preparing without water is an automatic F grade due to &ldquo;risk of heat damage to pulp.&rdquo; Test the spray before you begin cutting.</p>`,
       instruments: [
         'Rubber dam sheet',
         'Rubber dam frame (Young\'s or Nygaard-Ostby)',
-        'Rubber dam clamp (W8A / 206)',
+        'Rubber dam clamp (W8A / 14A)',
         'Rubber dam punch',
         'Rubber dam forceps',
         'Floss / tape for ligatures',
@@ -103,18 +103,18 @@
       title: 'Punch Cut in Proximal Pit',
       phase: 'Initial Access',
       duration: '1-2 min',
-      description: `<p>With your FG 330 pear-shaped carbide bur in the high-speed handpiece and water coolant running, make the initial entry point (the &ldquo;punch cut&rdquo;) in the distal pit / distal fossa of the occlusal surface. Hold the bur perpendicular to the occlusal surface (parallel to the long axis of the tooth). Apply the bur with a light, controlled touch &mdash; let the bur do the work. Do not force it.</p>
-<p>Sink the bur to a depth of approximately 2mm. The head of the FG 330 bur is approximately 1.5mm in length, so 2mm depth means the bur head is fully submerged plus an additional 0.5mm. Use the bur shank as a visual depth reference. At 2mm depth in an upper premolar, you should be cutting into dentine. If you are still entirely in enamel at 2mm, your angulation may be off or the tooth anatomy may require slight adjustment &mdash; but remember, the pulpal floor being entirely in enamel is an automatic F grade.</p>
+      description: `<p>With your round (001) carbide bur (Blue band) in the high-speed handpiece and water coolant running, make the initial entry point (the &ldquo;punch cut&rdquo;) in the distal pit / distal fossa of the occlusal surface. Hold the bur perpendicular to the occlusal surface (parallel to the long axis of the tooth). Apply the bur with a light, controlled touch &mdash; let the bur do the work. Do not force it.</p>
+<p>Sink the bur to a depth of approximately 2mm. Use the bur shank as a visual depth reference. At 2mm depth in an upper molar, you should be cutting into dentine. If you are still entirely in enamel at 2mm, your angulation may be off or the tooth anatomy may require slight adjustment &mdash; but remember, the pulpal floor being entirely in enamel is an automatic F grade.</p>
 <p>This initial punch cut serves two purposes: it establishes the correct depth for the occlusal portion of the cavity and it provides a reference point from which you will extend in subsequent steps. The cut should produce a small, clean, round-bottomed depression in the distal fossa area, approximately one bur-width in diameter.</p>
 <p>Keep the bur steady &mdash; avoid any lateral rocking or tilting that could widen the preparation beyond what is needed. The IDC emphasises &ldquo;convenience form to allow access to ADJ and allow material to be placed in cavity&rdquo; &mdash; the preparation must be functional but conservative. Excessive tissue removal at this stage will compound as you extend the outline.</p>
 <p>After making the punch cut, briefly pause and use the probe to verify the depth. Insert the probe into the cut and confirm approximately 2mm. This takes only a few seconds and ensures you are working to the correct depth from the outset.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        'FG 330 pear-shaped carbide bur',
+        'Round (001) carbide bur (Blue band)',
         'Mouth mirror',
         'Probe / explorer',
       ],
-      recommendedBur: 'fg330',
+      recommendedBur: 'round-001',
       tips: [
         'Use the bur head length (approximately 1.5mm) as a built-in depth gauge &mdash; when the head is just past fully submerged, you are at approximately 2mm',
         'Ensure water spray is hitting the bur tip &mdash; adjust the nozzle if needed before starting',
@@ -143,19 +143,19 @@
       title: 'Occlusal Extension',
       phase: 'Outline Form',
       duration: '2-3 min',
-      description: `<p>From the initial punch cut, extend the preparation mesially along the central groove toward the transverse ridge. Continue using the FG 330 pear-shaped carbide bur at the same 2mm depth. Move the bur in a controlled, sweeping motion along the groove pattern, maintaining a consistent depth and width. The preparation should follow the natural groove anatomy of the tooth.</p>
-<p>The critical boundary is the transverse (oblique) ridge. Extend TO the ridge but do NOT break through it. The transverse ridge is a structural keystone of the premolar &mdash; preserving it maintains the tooth&rsquo;s resistance to fracture. Visually, your mesial extent should stop at the point where the ridge begins to rise from the central fossa. If you are uncertain, err on the side of stopping slightly short rather than going too far. You can always refine later; you cannot add tooth structure back.</p>
+      description: `<p>From the initial punch cut, extend the preparation mesially along the central groove toward the transverse ridge. Continue using the pear-shaped (330) carbide bur (Blue band) at the same 2mm depth. Move the bur in a controlled, sweeping motion along the groove pattern, maintaining a consistent depth and width. The preparation should follow the natural groove anatomy of the tooth.</p>
+<p>The critical boundary is the transverse (oblique) ridge. Extend TO the ridge but do NOT break through it. The transverse ridge is a structural keystone of the molar &mdash; preserving it maintains the tooth&rsquo;s resistance to fracture. Visually, your mesial extent should stop at the point where the ridge begins to rise from the central fossa. If you are uncertain, err on the side of stopping slightly short rather than going too far. You can always refine later; you cannot add tooth structure back.</p>
 <p>Maintain the width of the occlusal preparation at no more than one-third of the intercuspal (buccolingual) width. Ideally, keep it to just wider than the bur head &mdash; approximately 1.5&ndash;2mm. The IDC marking sheet criterion states the preparation should be no wider than &ldquo;1/3 intercuspal width.&rdquo; Going wider weakens the remaining cusps and is marked as a deficiency. Use the cuspal tips as visual references and try to stay well within the inner inclines.</p>
 <p>As you extend mesially, ensure the occlusal floor (pulpal floor) remains flat and at a uniform 2mm depth. Avoid creating a scalloped or uneven floor &mdash; this will be assessed during the Quality Check phase. The floor should be smooth and perpendicular to the long axis of the tooth. The internal walls should have a slight divergence toward the occlusal surface (approximately 5&ndash;10 degrees) to provide a butt-joint margin suitable for composite restoration. Remember: no beveling for composite &mdash; this is an explicit G criterion on the IDC marking sheet.</p>
 <p>After completing the mesial extension, verify the outline from the occlusal view. The preparation at this stage should appear as a narrow trough running from the distal fossa to just short of the transverse ridge, approximately 2mm deep and 1.5&ndash;2mm wide. The walls should be well-defined and the margins crisp.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        'FG 330 pear-shaped carbide bur',
+        'Pear-shaped (330) carbide bur (Blue band)',
         'Mouth mirror',
         'Probe / explorer',
         'Periodontal probe (for width measurement)',
       ],
-      recommendedBur: 'fg330',
+      recommendedBur: 'pear-330',
       tips: [
         'Use the cusp tips as landmarks &mdash; staying within the inner third of the intercuspal distance keeps you safe',
         'If you cannot clearly see the transverse ridge, dry the tooth briefly with air and identify it before cutting further',
@@ -185,19 +185,19 @@
       title: 'Proximal Extension',
       phase: 'Outline Form',
       duration: '2-3 min',
-      description: `<p>Now extend the preparation distally from the punch cut toward the proximal surface. Switch to the 245 pear-shaped carbide bur (3mm head length), which provides better depth control for the proximal box. The goal is to begin establishing the proximal box by cutting through the marginal ridge and extending just past the contact area on the distal surface.</p>
+      description: `<p>Now extend the preparation distally from the punch cut toward the proximal surface. Switch to the long needle / interproximal bur (Blue band), which is specifically designed for breaking through contact points without damaging the adjacent tooth. The goal is to begin establishing the proximal box by cutting through the marginal ridge and extending just past the contact area on the distal surface.</p>
 <p>Angle the bur so that you are cutting distally, maintaining the same 2mm depth established in the occlusal portion. As you approach the marginal ridge, you will feel the bur begin to cut through the ridge. Continue until the bur has passed through the marginal ridge and the preparation opens onto the proximal surface. At this stage, you are creating the initial ditch or channel that will become the proximal box.</p>
 <p>The proximal extension must include the contact area. The IDC marking sheet has a specific G criterion: &ldquo;Proximal contact included in preparation.&rdquo; If your preparation does not extend far enough distally to clear the contact point, the restoration will not be able to establish a proper contact with the adjacent tooth. Use the probe to verify that the preparation extends just past where the contact area would be.</p>
 <p>Be extremely cautious of the adjacent tooth. Even with a protective matrix band in place, aggressive bur angulation or loss of control can damage the adjacent surface. The IDC grades this severely: &ldquo;damaged&rdquo; adjacent tooth = B grade; &ldquo;mutilated&rdquo; adjacent tooth = automatic F. Keep your bur angled slightly toward the tooth being prepared (away from the adjacent tooth) and maintain a steady fulcrum.</p>
 <p>At this stage, do not attempt to create the full depth of the proximal box or the gingival seat. You are simply establishing the distal extension and opening the proximal surface. The box will be deepened and refined in subsequent steps. The result should be a channel or ditch that connects the occlusal trough to the proximal surface, approximately one bur-width wide at this point.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        '245 pear-shaped carbide bur (3mm)',
+        'Long needle / interproximal bur (Blue band)',
         'Mouth mirror',
         'Probe / explorer',
         'Protective matrix band on adjacent tooth',
       ],
-      recommendedBur: '245',
+      recommendedBur: 'long-needle',
       tips: [
         'Ensure the protective matrix band on the adjacent tooth is still in position before you begin this step',
         'Angle the bur slightly away from the adjacent tooth (toward the tooth being prepared) to minimise risk of damage',
@@ -227,17 +227,17 @@
       phase: 'Outline Form',
       duration: '2-3 min',
       description: `<p>At the isthmus area where the occlusal portion meets the proximal box, extend the preparation buccolingually to create the characteristic T-shape (or &ldquo;step&rdquo; shape in IDC terminology) when viewed from the occlusal. This extension provides the convenience form necessary for proper access to the axio-pulpal line angle and for placement of the composite material.</p>
-<p>Using the 245 bur, widen the distal portion of the occlusal preparation at the junction with the proximal box. The buccolingual width at the isthmus should be approximately 2&ndash;2.5mm &mdash; wide enough to allow a condenser or placement instrument to access the proximal box, but not so wide that you are unnecessarily removing tooth structure. The IDC G criterion specifies &ldquo;convenience form to allow access to ADJ and allow material to be placed in cavity.&rdquo;</p>
+<p>Using the pear-shaped (330) bur, widen the distal portion of the occlusal preparation at the junction with the proximal box. The buccolingual width at the isthmus should be approximately 2&ndash;2.5mm &mdash; wide enough to allow a condenser or placement instrument to access the proximal box, but not so wide that you are unnecessarily removing tooth structure. The IDC G criterion specifies &ldquo;convenience form to allow access to ADJ and allow material to be placed in cavity.&rdquo;</p>
 <p>The resulting shape, when viewed from the occlusal surface, should resemble a T: the stem of the T is the narrow occlusal trough extending mesially, and the crossbar of the T is the slightly wider isthmus/proximal box area extending buccolingually. This design is fundamental to the Class II &ldquo;step&rdquo; cavity preparation.</p>
 <p>Ensure that the buccal and lingual walls of the proximal box extension diverge slightly toward the occlusal surface. This divergence (approximately 5&ndash;10 degrees from the vertical) ensures there are no undercuts that would trap air or prevent material placement. For composite, the walls should provide a clear path of insertion from the occlusal. Remember: no bevels &mdash; the margins must be butt joints.</p>
 <p>Check the preparation from both the buccal and lingual aspects to confirm the T-shape is symmetrical and that neither the buccal nor lingual extension is excessive. The buccal and lingual walls of the proximal portion should just clear the contact area &mdash; extending significantly beyond this removes healthy tooth structure unnecessarily and may weaken the cusps. Verify that the enamel margins are not undermined; the IDC states that &ldquo;enamel margins grossly undermined&rdquo; is an F grade criterion.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        '245 pear-shaped carbide bur (3mm)',
+        'Pear-shaped (330) carbide bur (Blue band)',
         'Mouth mirror',
         'Probe / explorer',
       ],
-      recommendedBur: '245',
+      recommendedBur: 'pear-330',
       tips: [
         'Think of the T-shape as functional &mdash; the crossbar needs to be just wide enough for your condenser to reach the box floor',
         'Check the width with a condenser or flat plastic to make sure an instrument can physically access the proximal box through the isthmus',
@@ -267,21 +267,21 @@
       title: 'Drop the Bur (Proximal Depth)',
       phase: 'Proximal Box',
       duration: '2-3 min',
-      description: `<p>This step establishes the depth of the proximal box. Using the 245 bur, create two depth-cut ditches in the proximal box &mdash; one on the buccal wall and one on the lingual wall. These cuts serve primarily as depth guides to ensure a consistent and correct proximal box depth.</p>
-<p>Position the bur against the buccal wall of the proximal box, near the bucco-axial line angle. Plunge the bur gingivally to create a vertical ditch or groove. The depth of this ditch should be approximately 1.5mm from the external proximal surface &mdash; enough to be clearly in dentine. The 245 bur has a 3mm head length, and you should use approximately half its head length as the cutting depth into the proximal wall. Repeat the same cut on the lingual wall.</p>
+      description: `<p>This step establishes the depth of the proximal box. Using the pear-shaped (330) bur (Blue band), create two depth-cut ditches in the proximal box &mdash; one on the buccal wall and one on the lingual wall. These cuts serve primarily as depth guides to ensure a consistent and correct proximal box depth.</p>
+<p>Position the bur against the buccal wall of the proximal box, near the bucco-axial line angle. Plunge the bur gingivally to create a vertical ditch or groove. The depth of this ditch should be approximately 1.5mm from the external proximal surface &mdash; enough to be clearly in dentine. Use a periodontal probe to verify the depth. Repeat the same cut on the lingual wall.</p>
 <p>These two ditches serve as reference points: they define where the axial wall of the proximal box will sit, and they establish the gingival extent of the box. The gingival margin of the box should sit approximately 1&ndash;1.5mm below the original contact point level, placing it in the gingival embrasure but not extending excessively toward the CEJ.</p>
-<p>The axial wall depth is critical for the IDC marking sheet. The criterion &ldquo;Extended into dentine; no excessive tissue loss&rdquo; means your preparation must reach dentine at the axial wall, but you must not cut so deep that you risk the pulp. In an upper premolar, the pulp chamber is positioned centrally &mdash; the axial wall at 1.5mm from the proximal surface should provide adequate clearance while ensuring the preparation is in dentine.</p>
+<p>The axial wall depth is critical for the IDC marking sheet. The criterion &ldquo;Extended into dentine; no excessive tissue loss&rdquo; means your preparation must reach dentine at the axial wall, but you must not cut so deep that you risk the pulp. In an upper molar, the pulp chamber is positioned centrally &mdash; the axial wall at 1.5mm from the proximal surface should provide adequate clearance while ensuring the preparation is in dentine.</p>
 <p>Keep the bur parallel to the long axis of the tooth as you create these depth cuts. Any tilting or angulation will result in an uneven axial wall that will need correction later. Ensure water coolant is running throughout. After creating both ditches, use the probe to verify the depth and symmetry of the two cuts.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        '245 pear-shaped carbide bur (3mm)',
+        'Pear-shaped (330) carbide bur (Blue band)',
         'Mouth mirror',
         'Probe / explorer',
         'Periodontal probe (for depth measurement)',
       ],
-      recommendedBur: '245',
+      recommendedBur: 'pear-330',
       tips: [
-        'The 245 bur head is 3mm long &mdash; use it as a built-in depth gauge (half the head = approximately 1.5mm)',
+        'Use a periodontal probe to verify 1.5mm depth at the proximal wall after each ditch cut',
         'Create the buccal ditch first, then the lingual &mdash; having one reference makes the second easier to match',
         'Keep the bur parallel to the long axis of the tooth to ensure a flat gingival seat later',
         'Do not extend the gingival margin excessively deep &mdash; 1&ndash;1.5mm below contact level is sufficient',
@@ -309,18 +309,18 @@
       title: 'Join the Two Ditches',
       phase: 'Proximal Box',
       duration: '2-3 min',
-      description: `<p>With the two depth-cut ditches established on the buccal and lingual walls (from Step 7), now connect them by removing the tooth structure between them. This creates the full proximal box with a defined axial wall, gingival seat, and buccal and lingual walls. Continue using the 245 bur.</p>
+      description: `<p>With the two depth-cut ditches established on the buccal and lingual walls (from Step 7), now connect them by removing the tooth structure between them. This creates the full proximal box with a defined axial wall, gingival seat, and buccal and lingual walls. Continue using the pear-shaped (330) bur (Blue band).</p>
 <p>Starting from one ditch (e.g., the buccal), sweep the bur across the proximal surface at the depth established by your ditches, moving toward the lingual ditch. The bur should remove the intervening tooth structure in controlled, overlapping passes. Work from the occlusal aspect gingivally, removing tooth structure layer by layer rather than attempting to cut the entire depth in one pass.</p>
 <p>As you join the ditches, you are forming the axial wall of the proximal box. This wall should be flat, smooth, and at a consistent depth of approximately 1.5mm from the proximal surface. The axial wall should be roughly perpendicular to the buccal and lingual walls (when viewed in cross-section) and should meet the pulpal floor of the occlusal portion at a rounded axio-pulpal line angle.</p>
 <p>The gingival seat (floor of the proximal box) should be flat and perpendicular to the long axis of the tooth. At this stage, it may be slightly rough &mdash; it will be refined in Step 13. The important thing now is that the gingival seat is at a consistent level across the full buccolingual width of the box, and that it creates a clear, defined margin.</p>
 <p>After joining the ditches, inspect the proximal box from the proximal view. You should see a well-defined box shape: flat axial wall at the back, relatively flat gingival seat at the bottom, and buccal and lingual walls that diverge slightly toward the proximal surface (5&ndash;10 degrees). The box should transition smoothly into the occlusal portion at the isthmus. Check that all margins are in tooth structure and none are unsupported or undermined.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        '245 pear-shaped carbide bur (3mm)',
+        'Pear-shaped (330) carbide bur (Blue band)',
         'Mouth mirror',
         'Probe / explorer',
       ],
-      recommendedBur: '245',
+      recommendedBur: 'pear-330',
       tips: [
         'Work in overlapping passes from occlusal to gingival &mdash; this gives better control than trying to cut the full depth at once',
         'The axial wall depth should match the depth of your ditches &mdash; use the ditches as your guide and do not go deeper',
@@ -391,19 +391,19 @@
       phase: 'Proximal Box',
       duration: '2-3 min',
       description: `<p>If any remaining thin shell of enamel exists on the proximal surface (the &ldquo;wall&rdquo;), it must now be intentionally removed to complete the proximal box opening. In some preparations, Steps 5&ndash;8 will have already removed all proximal enamel, but frequently a thin, unsupported shell remains, particularly at the buccal and lingual corners of the box. This step ensures complete removal of this wall.</p>
-<p>Using the 245 bur at low speed or a hand instrument (such as an enamel hatchet or a spoon excavator), carefully remove any remaining thin enamel shell. If using the bur, use a very light touch &mdash; the shell is thin and the bur can easily pass through it and contact the adjacent tooth. A hand instrument may be safer for this step: place the blade against the inner surface of the enamel shell and apply gentle outward pressure to fracture it away.</p>
+<p>Using the pear-shaped (330) bur at low speed or a hand instrument (such as an enamel hatchet or a spoon excavator), carefully remove any remaining thin enamel shell. If using the bur, use a very light touch &mdash; the shell is thin and the bur can easily pass through it and contact the adjacent tooth. A hand instrument may be safer for this step: place the blade against the inner surface of the enamel shell and apply gentle outward pressure to fracture it away.</p>
 <p>After removing the wall, examine the proximal box from the proximal view. The box should now be fully open to the proximal surface. The axial wall should be visible and the gingival seat clearly defined. The buccal and lingual walls of the box should form clean, defined margins that are continuous with the enamel of the tooth surface.</p>
 <p>Check critically for any unsupported enamel remaining at the margins of the proximal box. The IDC marking sheet states that &ldquo;enamel margins grossly undermined&rdquo; is an automatic F grade. Run your probe along all the margins of the proximal box &mdash; buccal wall, lingual wall, and gingival seat. If the probe catches on any thin, unsupported enamel flakes, remove them with the probe or a hand instrument. Every margin must be supported by sound dentine beneath.</p>
 <p>At the completion of this step, the basic cavity form should be fully established: occlusal trough connected to a proximal box, forming the characteristic &ldquo;step&rdquo; cavity design. The remaining steps focus on verification and refinement of this form. Take a moment to assess the overall preparation from multiple angles &mdash; occlusal, buccal, lingual, and proximal &mdash; before proceeding.</p>`,
       instruments: [
         'High-speed handpiece with water coolant (light touch)',
-        '245 pear-shaped carbide bur (3mm)',
+        'Pear-shaped (330) carbide bur (Blue band)',
         'Enamel hatchet',
         'Spoon excavator',
         'Probe / explorer',
         'Mouth mirror',
       ],
-      recommendedBur: '245',
+      recommendedBur: 'pear-330',
       tips: [
         'A hand instrument is often safer than a bur for removing the final thin enamel shell &mdash; less risk of adjacent tooth damage',
         'If the enamel shell does not fracture cleanly, use the bur at very low pressure to thin it further before fracturing',
@@ -476,19 +476,19 @@
       phase: 'Refinement',
       duration: '2-3 min',
       description: `<p>The &ldquo;bird beaks&rdquo; are the buccal and lingual cavosurface margins of the proximal box where they meet the external tooth surface. These margins are critical for the seal and aesthetics of the final restoration. They must be smooth, well-defined, and slightly flared to ensure no undermined enamel remains and to create clean, accessible margins for composite placement.</p>
-<p>Switch to the thin tapered fissure bur. This bur&rsquo;s narrow profile allows precise refinement of the buccal and lingual walls of the proximal box without removing excessive tooth structure. Position the bur against the buccal wall of the proximal box and run it gingivally along the wall from the isthmus to the gingival seat. The goal is to create a smooth, slightly flared wall that eliminates any enamel undermining and creates a definitive cavosurface margin.</p>
+<p>Switch to the football/egg (379) bur (Green band). This bur&rsquo;s rounded profile allows precise contouring of the buccal and lingual walls of the proximal box without removing excessive tooth structure. Position the bur against the buccal wall of the proximal box and run it gingivally along the wall from the isthmus to the gingival seat. The goal is to create a smooth, slightly flared wall that eliminates any enamel undermining and creates a definitive cavosurface margin.</p>
 <p>The flare should be gentle &mdash; approximately 5&ndash;10 degrees of divergence from the vertical (toward the proximal surface). This ensures that the enamel rods at the margin are supported by underlying tooth structure and that the composite can be placed and finished to a smooth, flush margin. Repeat on the lingual wall.</p>
 <p>When viewed from the proximal, the completed bird beaks should create a smooth, gentle curve from the buccal and lingual tooth surfaces into the proximal box. There should be no sharp angles, ledges, or steps in the margin. The transition should be continuous and flowing. The margin should be clearly visible and palpable with a probe &mdash; run the probe along the entire buccal and lingual margins to verify smoothness.</p>
-<p>Be conservative with the thin tapered bur &mdash; it cuts efficiently and it is easy to remove more tooth structure than intended. Use light, controlled strokes and check your progress frequently. The bird beaks do not need to be perfectly symmetrical, but both should be equally smooth and well-defined. Remember: the IDC marking sheet assesses &ldquo;walls and margins smooth and cavity well defined&rdquo; for a G grade.</p>`,
+<p>Be conservative with the football/egg bur &mdash; the Green band indicates it is coarse and it is easy to remove more tooth structure than intended. Use light, controlled strokes and check your progress frequently. The bird beaks do not need to be perfectly symmetrical, but both should be equally smooth and well-defined. Remember: the IDC marking sheet assesses &ldquo;walls and margins smooth and cavity well defined&rdquo; for a G grade.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        'Thin tapered fissure bur',
+        'Football/egg (379) bur (Green band)',
         'Mouth mirror',
         'Probe / explorer',
       ],
-      recommendedBur: 'thin-taper',
+      recommendedBur: 'football-379',
       tips: [
-        'The thin tapered bur is aggressive &mdash; use a light touch and let the bur speed do the work',
+        'The football/egg bur (Green band) is coarse &mdash; use a light touch and let the bur speed do the work',
         'Run the probe along the margin after each pass to feel for any remaining ledges or irregularities',
         'The flare should be subtle &mdash; think of it as &ldquo;opening up&rdquo; the margin, not creating a wide chamfer',
         'View the margins from the proximal aspect to verify the bird beak contour &mdash; it should be a smooth, gentle curve',
@@ -516,24 +516,24 @@
       title: 'Smoothen Gingival Seat',
       phase: 'Refinement',
       duration: '2-3 min',
-      description: `<p>The gingival seat (floor of the proximal box) must be refined to be flat, smooth, and at a consistent level across the full buccolingual width of the box. Switch to the super-fine diamond bur, which is ideal for smoothing without removing significant additional tooth structure. The super-fine diamond provides a finishing action rather than a cutting action.</p>
-<p>Run the super-fine diamond across the gingival seat in gentle, sweeping passes from buccal to lingual. The bur should lightly abrade the surface, removing any roughness, ridges, or irregularities left by the 245 bur during the initial box preparation. The goal is a glass-smooth seat that will provide a perfect seal with the composite at the gingival margin.</p>
+      description: `<p>The gingival seat (floor of the proximal box) must be refined to be flat, smooth, and at a consistent level across the full buccolingual width of the box. Switch to the finishing bur (Red or Yellow band), which is ideal for smoothing without removing significant additional tooth structure. The finishing bur provides a finishing action rather than a cutting action.</p>
+<p>Run the finishing bur across the gingival seat in gentle, sweeping passes from buccal to lingual. The bur should lightly abrade the surface, removing any roughness, ridges, or irregularities left by the pear-shaped (330) bur during the initial box preparation. The goal is a glass-smooth seat that will provide a perfect seal with the composite at the gingival margin.</p>
 <p>The gingival seat should be perpendicular to the long axis of the tooth. Check this by viewing the preparation from the buccal or lingual aspect &mdash; the gingival seat should appear as a horizontal line (relative to the tooth axis). If the seat is angled, it will compromise the margin seal and may be marked as a deficiency. Use the periodontal probe laid flat on the gingival seat to visually confirm it is flat and level.</p>
 <p>Pay particular attention to the junction of the gingival seat with the axial wall (the gingivoaxial line angle). This junction should be a clearly defined, slightly rounded angle &mdash; not a sharp 90-degree corner (which would create a stress concentration) and not a vague, rounded-over transition (which would make the gingival margin indistinct). The IDC assesses whether the &ldquo;cavity is well defined&rdquo; for a G grade, and a clean gingivoaxial line angle is part of this criterion.</p>
 <p>After smoothing, run the probe along the gingival seat and across the gingivoaxial line angle. The probe should glide smoothly across the entire seat without catching on any roughness, ridges, or debris. The gingival margin should be clearly palpable as a distinct edge where the seat meets the external tooth surface. A well-defined gingival margin is essential for a successful composite restoration and for a G grade on the IDC marking sheet.</p>`,
       instruments: [
         'High-speed or slow-speed handpiece with water coolant',
-        'Super-fine diamond bur',
+        'Finishing bur (Red or Yellow band)',
         'Periodontal probe (for flatness check)',
         'Probe / explorer',
         'Mouth mirror',
       ],
-      recommendedBur: 'sf-diamond',
+      recommendedBur: 'finishing',
       tips: [
-        'The super-fine diamond should be used with minimal pressure &mdash; it is a finishing instrument, not a cutting one',
+        'The finishing bur should be used with minimal pressure &mdash; it is a finishing instrument, not a cutting one',
         'Lay the periodontal probe flat on the gingival seat and look for any rocking &mdash; a flat seat will not rock the probe',
         'The gingival seat is one of the most scrutinised areas by IDC examiners &mdash; invest the time to get it right',
-        'If you find the seat is angled, use the 245 bur briefly to correct the angle before finishing with the diamond',
+        'If you find the seat is angled, use the pear-shaped (330) bur briefly to correct the angle before finishing',
         'Good lighting and a dry field (air syringe) are essential for evaluating the smoothness of the gingival seat',
       ],
       criteria: [
@@ -558,23 +558,23 @@
       title: 'Smoothen Occlusal Floor & Walls',
       phase: 'Refinement',
       duration: '2-3 min',
-      description: `<p>Refine the occlusal portion of the preparation. The pulpal floor and all internal walls must be smooth and well-defined. Use the super-fine diamond bur for the floor and the &frac14; round bur for rounding internal line angles. This step addresses the IDC G criterion: &ldquo;walls and margins smooth and cavity well defined.&rdquo;</p>
-<p>Start with the pulpal floor (occlusal floor). Run the super-fine diamond gently across the floor in mesio-distal passes. The floor should be flat, smooth, and at a consistent 2mm depth from the occlusal surface. Any ridges, grooves, or unevenness from the initial cutting should be smoothed away. The floor should be perpendicular to the long axis of the tooth when viewed in cross-section.</p>
-<p>Next, refine the buccal and lingual walls of the occlusal portion. These walls should be smooth and should diverge slightly toward the occlusal surface (approximately 5&ndash;10 degrees). Run the super-fine diamond lightly along each wall. Check that the cavosurface margins at the occlusal surface are sharp, clean butt joints &mdash; no beveling, no rounding, no feathered edges. The IDC explicitly marks the absence of beveling as a G criterion for composite preparations.</p>
-<p>Using the &frac14; round bur (slow-speed), gently round all internal line angles. The pulpo-buccal, pulpo-lingual, and pulpo-axial line angles should be gently rounded, not sharp. Sharp internal line angles concentrate stress and can lead to fracture of the restoration or the remaining tooth structure. The rounding should be subtle &mdash; just enough to eliminate the sharp corner, not enough to create a coved or concave junction.</p>
+      description: `<p>Refine the occlusal portion of the preparation. The pulpal floor and all internal walls must be smooth and well-defined. Use the finishing bur (Red or Yellow band) for the floor and the round (001) bur (Blue band) for rounding internal line angles. This step addresses the IDC G criterion: &ldquo;walls and margins smooth and cavity well defined.&rdquo;</p>
+<p>Start with the pulpal floor (occlusal floor). Run the finishing bur gently across the floor in mesio-distal passes. The floor should be flat, smooth, and at a consistent 2mm depth from the occlusal surface. Any ridges, grooves, or unevenness from the initial cutting should be smoothed away. The floor should be perpendicular to the long axis of the tooth when viewed in cross-section.</p>
+<p>Next, refine the buccal and lingual walls of the occlusal portion. These walls should be smooth and should diverge slightly toward the occlusal surface (approximately 5&ndash;10 degrees). Run the finishing bur lightly along each wall. Check that the cavosurface margins at the occlusal surface are sharp, clean butt joints &mdash; no beveling, no rounding, no feathered edges. The IDC explicitly marks the absence of beveling as a G criterion for composite preparations.</p>
+<p>Using the round (001) bur (Blue band, slow-speed), gently round all internal line angles. The pulpo-buccal, pulpo-lingual, and pulpo-axial line angles should be gently rounded, not sharp. Sharp internal line angles concentrate stress and can lead to fracture of the restoration or the remaining tooth structure. The rounding should be subtle &mdash; just enough to eliminate the sharp corner, not enough to create a coved or concave junction.</p>
 <p>After completing the wall and floor refinement, examine the preparation in cross-section view (mentally or by viewing from the proximal). You should see: a flat pulpal floor at 2mm depth, smooth buccal and lingual walls diverging toward the occlusal, rounded internal line angles, and crisp butt-joint margins at the cavosurface. The transition from the occlusal portion to the proximal box at the isthmus should be smooth and continuous. All surfaces should be free of bur marks, ridges, or debris.</p>`,
       instruments: [
         'High-speed or slow-speed handpiece',
-        'Super-fine diamond bur (floor and walls)',
-        '\u00BC round bur (line angles)',
+        'Finishing bur \u2014 Red or Yellow band (floor and walls)',
+        'Round (001) bur \u2014 Blue band (line angles)',
         'Probe / explorer',
         'Mouth mirror',
         'Three-in-one syringe',
       ],
-      recommendedBur: 'sf-diamond',
+      recommendedBur: 'finishing',
       tips: [
-        'Use the super-fine diamond at light pressure &mdash; you are finishing, not cutting',
-        'Switch to the &frac14; round bur in the slow-speed handpiece for rounding line angles &mdash; better control at low speed',
+        'Use the finishing bur at light pressure &mdash; you are finishing, not cutting',
+        'Switch to the round (001) bur in the slow-speed handpiece for rounding line angles &mdash; better control at low speed',
         'After smoothing, dry the preparation with air and examine under good lighting to see any remaining irregularities',
         'The cavosurface margin must be a butt joint &mdash; if you see any hint of a bevel or feathered edge, it needs correction',
         'Run the probe along the floor from mesial to distal &mdash; it should glide without catching',
@@ -593,7 +593,7 @@
         'Leaving sharp internal line angles &mdash; stress concentrators that reduce restoration longevity',
         'Over-smoothing and creating a concave floor (deeper in the centre than at the edges)',
         'Neglecting the mesial wall (near the transverse ridge) &mdash; it needs smoothing too',
-        'Using the super-fine diamond too aggressively and deepening the preparation beyond 2mm',
+        'Using the finishing bur too aggressively and deepening the preparation beyond 2mm',
       ],
       view: 'cross-section',
     },
@@ -603,17 +603,17 @@
       phase: 'Refinement',
       duration: '1-2 min',
       description: `<p>This step creates the final proximal box contour &mdash; the characteristic S-curve (also described as a &ldquo;funnel&rdquo; shape) of the proximal box walls when viewed from the proximal aspect. The S-curve refers to the gentle, flowing transition from the narrower axial wall depth to the wider proximal opening. This contour ensures no undercuts exist that would trap air, and it provides a smooth path of withdrawal for placement instruments.</p>
-<p>Using the thin tapered fissure bur, refine the buccal and lingual walls of the proximal box so that they diverge gradually and smoothly from the axial wall toward the proximal surface. The walls should not be dead straight &mdash; they should have a subtle, continuous curve that flares outward. When traced from the axial wall to the cavosurface margin, the wall profile should describe a gentle S-shape: slightly concave near the axial wall, transitioning to slightly convex near the external surface.</p>
+<p>Using the football/egg (379) bur (Green band), refine the buccal and lingual walls of the proximal box so that they diverge gradually and smoothly from the axial wall toward the proximal surface. The walls should not be dead straight &mdash; they should have a subtle, continuous curve that flares outward. When traced from the axial wall to the cavosurface margin, the wall profile should describe a gentle S-shape: slightly concave near the axial wall, transitioning to slightly convex near the external surface.</p>
 <p>This S-curve or funnel shape serves several clinical purposes: it eliminates undercuts that would trap air during composite placement; it ensures all enamel rods at the cavosurface margin are supported by underlying structure; it provides a smooth, flowing path for condensing instruments; and it creates aesthetically pleasing proximal contours for the final restoration.</p>
-<p>Use very light, controlled strokes with the thin tapered bur. You are making subtle adjustments to the wall contour, not removing significant tooth structure. Check your progress frequently by viewing the proximal box from the proximal aspect. The buccal and lingual walls should appear as smooth, gently curving surfaces that open outward like a funnel. There should be no flat spots, ledges, or abrupt changes in angulation.</p>
+<p>Use very light, controlled strokes with the football/egg bur. You are making subtle adjustments to the wall contour, not removing significant tooth structure. Check your progress frequently by viewing the proximal box from the proximal aspect. The buccal and lingual walls should appear as smooth, gently curving surfaces that open outward like a funnel. There should be no flat spots, ledges, or abrupt changes in angulation.</p>
 <p>After establishing the S-curve on both walls, run the probe from the axial wall along the buccal wall to the cavosurface margin, then repeat on the lingual wall. The probe should follow a smooth, continuous curve without catching on any irregularity. The final proximal box, when viewed from the proximal aspect, should appear as a well-proportioned, symmetrical funnel shape that invites easy access for composite placement.</p>`,
       instruments: [
         'High-speed handpiece with water coolant',
-        'Thin tapered fissure bur',
+        'Football/egg (379) bur (Green band)',
         'Probe / explorer',
         'Mouth mirror',
       ],
-      recommendedBur: 'thin-taper',
+      recommendedBur: 'football-379',
       tips: [
         'The S-curve is subtle &mdash; you are refining the wall contour, not reshaping the entire box',
         'Think of the S-curve as removing any undercuts while creating a smooth, flowing wall profile',
@@ -747,7 +747,7 @@
     const g = svgEl('g', { transform: 'translate(250,250)' });
     const phase = getOcclusalPhase(stepId);
 
-    // Tooth outline (premolar occlusal - rounded rectangular)
+    // Tooth outline (molar occlusal - rounded rectangular)
     g.appendChild(svgEl('ellipse', {
       cx: '0', cy: '0', rx: '120', ry: '100',
       class: 'tooth-outline',

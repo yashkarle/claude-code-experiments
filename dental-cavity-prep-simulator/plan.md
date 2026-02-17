@@ -527,7 +527,7 @@ The existing 3 SVG views need overlay updates for all 16 steps, plus 2 new views
 - **Session recording/replay** — requires complex state serialization
 - **Progress tracking with localStorage** — deferred to future iteration (keeps this PR focused)
 - **Gamification (badges, leaderboard)** — deferred to future iteration
-- **Multiple tooth anatomies** — deferred (current uses upper premolar only)
+- **Multiple tooth anatomies** — deferred (current uses upper molar UL6/26 only)
 - **Crown preparation criteria** — separate exam component, out of scope for this simulator
 - **Temporary restoration criteria** — separate exam component, out of scope for this simulator
 
