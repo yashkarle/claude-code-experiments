@@ -321,17 +321,21 @@ with tab1:
             row=row_idx, col=1,
         )
 
-    # FY boundary lines
+    # FY boundary lines (add_shape avoids the categorical x-axis annotation bug)
     for fy_m in fy_boundaries:
         if fy_m - 1 < len(date_labels):
             lbl = date_labels[fy_m - 1]
-            for row_idx in [1, 2]:
-                fig1.add_vline(
-                    x=lbl, line_dash="dash", line_color="orange", line_width=1.5,
-                    annotation_text="FY Reset" if row_idx == 1 else "",
-                    annotation_position="top",
-                    row=row_idx, col=1,
-                )
+            fig1.add_shape(
+                type="line", x0=lbl, x1=lbl, y0=0, y1=1,
+                xref="x", yref="paper",
+                line=dict(dash="dash", color="orange", width=1.5),
+            )
+            fig1.add_annotation(
+                x=lbl, y=1.03, xref="x", yref="paper",
+                text="FY Reset", showarrow=False,
+                font=dict(color="darkorange", size=10),
+                yanchor="bottom", xanchor="left",
+            )
 
     fig1.update_yaxes(tickformat=",.0f", tickprefix="₹")
     fig1.update_layout(
@@ -368,10 +372,17 @@ with tab1:
     )
     for fy_m in fy_boundaries:
         if fy_m - 1 < len(date_labels):
-            fig1b.add_vline(
-                x=date_labels[fy_m - 1],
-                line_dash="dash", line_color="orange", line_width=1.5,
-                annotation_text="FY Reset", annotation_position="top",
+            lbl = date_labels[fy_m - 1]
+            fig1b.add_shape(
+                type="line", x0=lbl, x1=lbl, y0=0, y1=1,
+                xref="x", yref="paper",
+                line=dict(dash="dash", color="orange", width=1.5),
+            )
+            fig1b.add_annotation(
+                x=lbl, y=1.03, xref="x", yref="paper",
+                text="FY Reset", showarrow=False,
+                font=dict(color="darkorange", size=10),
+                yanchor="bottom", xanchor="left",
             )
     fig1b.update_yaxes(tickformat=",.0f", tickprefix="₹")
     fig1b.update_layout(
@@ -578,11 +589,17 @@ with tab3:
     for fy_m in fy_boundaries:
         fy_m_idx = heatmap_months.index(fy_m) if fy_m in heatmap_months else None
         if fy_m_idx is not None:
-            fig3.add_vline(
-                x=heatmap_dates[fy_m_idx],
-                line_dash="dash", line_color="white", line_width=2,
-                annotation_text="FY Reset", annotation_position="top",
-                annotation_font_color="white",
+            lbl = heatmap_dates[fy_m_idx]
+            fig3.add_shape(
+                type="line", x0=lbl, x1=lbl, y0=0, y1=1,
+                xref="x", yref="paper",
+                line=dict(dash="dash", color="white", width=2),
+            )
+            fig3.add_annotation(
+                x=lbl, y=1.03, xref="x", yref="paper",
+                text="FY Reset", showarrow=False,
+                font=dict(color="white", size=10),
+                yanchor="bottom", xanchor="left",
             )
 
     fig3.update_layout(
@@ -671,10 +688,17 @@ with tab4:
     )
     for fy_m in fy_boundaries:
         if fy_m - 1 < len(date_labels):
-            fig4.add_vline(
-                x=date_labels[fy_m - 1],
-                line_dash="dash", line_color="orange", line_width=1.5,
-                annotation_text="FY Reset", annotation_position="top",
+            lbl = date_labels[fy_m - 1]
+            fig4.add_shape(
+                type="line", x0=lbl, x1=lbl, y0=0, y1=1,
+                xref="x", yref="paper",
+                line=dict(dash="dash", color="orange", width=1.5),
+            )
+            fig4.add_annotation(
+                x=lbl, y=1.03, xref="x", yref="paper",
+                text="FY Reset", showarrow=False,
+                font=dict(color="darkorange", size=10),
+                yanchor="bottom", xanchor="left",
             )
     fig4.update_yaxes(tickformat=",.0f", tickprefix="₹")
     fig4.update_layout(
