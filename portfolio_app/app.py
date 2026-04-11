@@ -145,7 +145,7 @@ def get_idata(
         ["Parag Parikh Flexi Cap", "ICICI Pru Large Cap"],
         observed,
     )
-    return run_inference(model)
+    return run_inference(model, target_accept=0.95)
 
 
 @st.cache_data(show_spinner=False)
@@ -189,7 +189,7 @@ N_MONTHS = 36
 months_idx = np.arange(1, N_MONTHS + 1)
 today = datetime.date.today()
 date_labels = [
-    (today + datetime.timedelta(days=30 * m)).strftime("%b %Y")
+    (today + datetime.timedelta(days=30 * int(m))).strftime("%b %Y")
     for m in months_idx
 ]
 fy_boundaries = portfolio.fy_boundary_months(N_MONTHS)

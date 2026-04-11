@@ -92,6 +92,7 @@ def run_inference(
     cores: int = 1,         # MUST be 1 for Streamlit (avoids multiprocessing fork)
     random_seed: int = 42,
     progressbar: bool = False,
+    target_accept: float = 0.95,  # higher = fewer divergences, slightly slower
 ) -> az.InferenceData:
     """
     Run NUTS sampling on the provided model.
@@ -107,7 +108,7 @@ def run_inference(
             cores=cores,
             random_seed=random_seed,
             progressbar=progressbar,
-            target_accept=0.9,
+            target_accept=target_accept,
         )
     return idata
 
