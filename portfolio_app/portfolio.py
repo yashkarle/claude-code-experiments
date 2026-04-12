@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Literal, Optional
+
+import numpy as np
 
 
 # ---------------------------------------------------------------------------
@@ -321,3 +323,456 @@ def compute_todays_recommendation(portfolio: Portfolio, target_amount: float = 0
         "months_to_fy_end": months_left,
         "next_fy_date": next_fy_date,
     }
+
+
+# ---------------------------------------------------------------------------
+# Multi-FY withdrawal optimizer — dataclasses
+# ---------------------------------------------------------------------------
+
+@dataclass
+class WithdrawalTranche:
+    """One scheduled withdrawal slice within a single Indian financial year."""
+
+    fy_label: str                       # e.g. "FY 2026-27"
+    month_index: int                    # 1-based month offset from today
+    date: datetime.date                 # calendar date of the tranche
+    total_amount: float                 # rupees withdrawn in this tranche
+    allocations: dict[str, float]       # {fund_name: rupees}
+    realized_gain: float                # LTCG triggered by this tranche
+    taxable_gain: float                 # portion above this FY's exemption
+    tax: float                          # 12.5% × taxable_gain
+
+    @property
+    def net_received(self) -> float:
+        return self.total_amount - self.tax
+
+    @property
+    def effective_tax_rate(self) -> float:
+        if self.total_amount <= 0:
+            return 0.0
+        return self.tax / self.total_amount
+
+
+@dataclass
+class WithdrawalSchedule:
+    """A complete multi-tranche withdrawal plan across one or more FYs."""
+
+    tranches: list[WithdrawalTranche]
+    total_withdrawal: float
+    total_tax: float
+    total_net: float
+    exemption_utilization: dict[str, float]   # fy_label -> fraction in [0, 1+]
+    strategy: str                             # which strategy produced this
+    target_amount: float                      # original target the user asked for
+    shortfall: float = 0.0                    # rupees we could not schedule
+
+    @property
+    def effective_tax_rate(self) -> float:
+        if self.total_withdrawal <= 0:
+            return 0.0
+        return self.total_tax / self.total_withdrawal
+
+
+# ---------------------------------------------------------------------------
+# Multi-FY withdrawal optimizer — helpers
+# ---------------------------------------------------------------------------
+
+def fy_label_for_date(d: datetime.date) -> str:
+    """Return the Indian FY label that contains the given calendar date.
+
+    Example: 2026-04-12 -> "FY 2026-27"; 2027-03-15 -> "FY 2026-27".
+    """
+    if d.month >= 4:
+        start = d.year
+    else:
+        start = d.year - 1
+    end_yy = (start + 1) % 100
+    return f"FY {start}-{end_yy:02d}"
+
+
+def fy_anchor_months(
+    portfolio: Portfolio,
+    horizon_months: int,
+) -> list[tuple[str, int, datetime.date]]:
+    """Enumerate the FYs that fall within the horizon and their anchor months.
+
+    The anchor month for the *current* FY is month 1 (today). For every later
+    FY it is the month index whose calendar date is on or after that FY's
+    Apr 1 boundary (computed via ``Portfolio.fy_boundary_months``).
+
+    Returns a list of ``(fy_label, anchor_month_index, anchor_date)`` tuples
+    in chronological order, covering only FYs whose anchor lies within
+    ``[1, horizon_months]``.
+    """
+    today = portfolio.as_of_date
+    anchors: list[tuple[str, int, datetime.date]] = []
+
+    # Current FY: anchor is "today" (month 1).
+    anchors.append((fy_label_for_date(today), 1, today))
+
+    for fy_m in portfolio.fy_boundary_months(horizon_months):
+        anchor_date = today + datetime.timedelta(days=30 * int(fy_m))
+        anchors.append((fy_label_for_date(anchor_date), int(fy_m), anchor_date))
+
+    # De-duplicate consecutive identical labels (defensive — shouldn't happen).
+    deduped: list[tuple[str, int, datetime.date]] = []
+    seen_labels: set[str] = set()
+    for label, m, d in anchors:
+        if label in seen_labels:
+            continue
+        seen_labels.add(label)
+        deduped.append((label, m, d))
+    return deduped
+
+
+def _projected_portfolio_value_at_month(
+    portfolio: Portfolio,
+    paths: dict[str, np.ndarray],
+    month_index: int,
+    risk_aware: bool,
+) -> dict[str, float]:
+    """Return per-fund projected value at month_index using p50 (or p10).
+
+    ``paths[fund_name]`` has shape (n_samples, n_months). ``month_index`` is
+    1-based and clamped to the available horizon.
+    """
+    percentile = 10 if risk_aware else 50
+    n_months_available = next(iter(paths.values())).shape[1]
+    idx = max(0, min(int(month_index) - 1, n_months_available - 1))
+    return {
+        f.name: float(np.percentile(paths[f.name][:, idx], percentile))
+        for f in portfolio.funds
+    }
+
+
+# ---------------------------------------------------------------------------
+# Multi-FY withdrawal optimizer — strategies
+# ---------------------------------------------------------------------------
+
+def _build_tranche(
+    portfolio: Portfolio,
+    fy_label: str,
+    month_index: int,
+    anchor_date: datetime.date,
+    tranche_amount: float,
+    proj_at_anchor: dict[str, float],
+    fy_exemption: float,
+) -> WithdrawalTranche:
+    """Materialize a single tranche given an anchor month and amount."""
+    if tranche_amount <= 0:
+        return WithdrawalTranche(
+            fy_label=fy_label,
+            month_index=month_index,
+            date=anchor_date,
+            total_amount=0.0,
+            allocations={f.name: 0.0 for f in portfolio.funds},
+            realized_gain=0.0,
+            taxable_gain=0.0,
+            tax=0.0,
+        )
+
+    allocations = suggest_proportional_split(
+        portfolio, tranche_amount, proj_at_anchor
+    )
+    fresh_state = TaxState(
+        fy_exemption_limit=fy_exemption, already_realized=0.0
+    )
+    info = compute_portfolio_withdrawal_tax(
+        portfolio,
+        allocations,
+        proj_at_anchor,
+        tax_state_override=fresh_state,
+    )
+    return WithdrawalTranche(
+        fy_label=fy_label,
+        month_index=month_index,
+        date=anchor_date,
+        total_amount=tranche_amount,
+        allocations=allocations,
+        realized_gain=info["total_realized_gain"],
+        taxable_gain=info["taxable_gain"],
+        tax=info["total_tax"],
+    )
+
+
+def _tax_minimizing_schedule(
+    portfolio: Portfolio,
+    target_amount: float,
+    horizon_months: int,
+    paths: dict[str, np.ndarray],
+    risk_aware: bool,
+) -> WithdrawalSchedule:
+    """Greedy: fill each FY's exemption exactly, in chronological order."""
+    anchors = fy_anchor_months(portfolio, horizon_months)
+    if not anchors:
+        return WithdrawalSchedule(
+            tranches=[],
+            total_withdrawal=0.0,
+            total_tax=0.0,
+            total_net=0.0,
+            exemption_utilization={},
+            strategy="tax_minimizing",
+            target_amount=target_amount,
+            shortfall=target_amount,
+        )
+
+    remaining = float(target_amount)
+    tranches: list[WithdrawalTranche] = []
+
+    for i, (fy_label, anchor_m, anchor_d) in enumerate(anchors):
+        if remaining <= 0:
+            break
+
+        proj = _projected_portfolio_value_at_month(
+            portfolio, paths, anchor_m, risk_aware
+        )
+        total_pv = sum(proj.values())
+        total_cost = sum(f.invested for f in portfolio.funds)
+        if total_pv <= 0:
+            blended_gr = 0.0
+        else:
+            blended_gr = max(0.0, (total_pv - total_cost) / total_pv)
+
+        # Current FY uses the live remaining exemption; future FYs reset.
+        if i == 0:
+            fy_exemption = portfolio.tax_state.remaining_exemption
+            fy_limit = portfolio.tax_state.fy_exemption_limit
+        else:
+            fy_exemption = portfolio.tax_state.fy_exemption_limit
+            fy_limit = portfolio.tax_state.fy_exemption_limit
+
+        if blended_gr > 0:
+            max_zero_tax = fy_exemption / blended_gr
+        else:
+            max_zero_tax = remaining  # no gain → no tax regardless
+
+        tranche_amount = min(max_zero_tax, remaining)
+        tranche = _build_tranche(
+            portfolio, fy_label, anchor_m, anchor_d,
+            tranche_amount, proj, fy_limit,
+        )
+        tranches.append(tranche)
+        remaining -= tranche_amount
+
+    # Spill any leftover into the last FY at 12.5%.
+    if remaining > 0 and tranches:
+        last = tranches[-1]
+        proj = _projected_portfolio_value_at_month(
+            portfolio, paths, last.month_index, risk_aware
+        )
+        new_total = last.total_amount + remaining
+        merged = _build_tranche(
+            portfolio, last.fy_label, last.month_index, last.date,
+            new_total, proj, portfolio.tax_state.fy_exemption_limit,
+        )
+        tranches[-1] = merged
+        remaining = 0.0
+
+    total_withdrawal = sum(t.total_amount for t in tranches)
+    total_tax = sum(t.tax for t in tranches)
+    total_net = total_withdrawal - total_tax
+
+    exemption_util: dict[str, float] = {}
+    for t in tranches:
+        cap = portfolio.tax_state.fy_exemption_limit
+        used = min(t.realized_gain, cap)
+        exemption_util[t.fy_label] = used / cap if cap > 0 else 0.0
+
+    return WithdrawalSchedule(
+        tranches=tranches,
+        total_withdrawal=total_withdrawal,
+        total_tax=total_tax,
+        total_net=total_net,
+        exemption_utilization=exemption_util,
+        strategy="tax_minimizing",
+        target_amount=target_amount,
+        shortfall=max(0.0, target_amount - total_withdrawal),
+    )
+
+
+def optimize_multi_fy_withdrawal(
+    portfolio: Portfolio,
+    target_amount: float,
+    horizon_months: int,
+    projected_paths: dict[str, np.ndarray],
+    strategy: Literal[
+        "tax_minimizing", "equal_split", "front_loaded", "back_loaded"
+    ] = "tax_minimizing",
+    risk_aware: bool = False,
+) -> WithdrawalSchedule:
+    """Compute a multi-FY withdrawal schedule for ``target_amount``.
+
+    Parameters
+    ----------
+    portfolio : Portfolio
+        Live portfolio with cost basis, current values, FY tax state.
+    target_amount : float
+        Total rupees the user wants to withdraw across the horizon.
+    horizon_months : int
+        Number of months from today to plan over (1 ≤ h ≤ 60 typically).
+    projected_paths : dict[str, np.ndarray]
+        Per-fund posterior-predictive value paths, shape (n_samples, n_months).
+        Must include each fund name in ``portfolio.funds``. ``"total"`` is
+        ignored — totals are recomputed per FY anchor.
+    strategy : Literal[...]
+        ``"tax_minimizing"`` (default) — greedy fill of each FY's exemption.
+        ``"equal_split"``  — divide target evenly across FYs in horizon.
+        ``"front_loaded"`` — withdraw all in the current FY (single tranche).
+        ``"back_loaded"``  — withdraw all in the last FY of the horizon.
+    risk_aware : bool
+        If True, projected values use the p10 (pessimistic) percentile
+        instead of the p50 median. Tightens the zero-tax window.
+    """
+    if target_amount <= 0:
+        return WithdrawalSchedule(
+            tranches=[], total_withdrawal=0.0, total_tax=0.0, total_net=0.0,
+            exemption_utilization={}, strategy=strategy,
+            target_amount=target_amount, shortfall=0.0,
+        )
+
+    if strategy == "tax_minimizing":
+        return _tax_minimizing_schedule(
+            portfolio, target_amount, horizon_months,
+            projected_paths, risk_aware,
+        )
+    if strategy == "equal_split":
+        return _equal_split_schedule(
+            portfolio, target_amount, horizon_months,
+            projected_paths, risk_aware,
+        )
+    if strategy == "front_loaded":
+        return _front_loaded_schedule(
+            portfolio, target_amount, horizon_months,
+            projected_paths, risk_aware,
+        )
+    if strategy == "back_loaded":
+        return _back_loaded_schedule(
+            portfolio, target_amount, horizon_months,
+            projected_paths, risk_aware,
+        )
+    raise ValueError(f"Unknown strategy: {strategy!r}")
+
+
+def _equal_split_schedule(
+    portfolio: Portfolio,
+    target_amount: float,
+    horizon_months: int,
+    paths: dict[str, np.ndarray],
+    risk_aware: bool,
+) -> WithdrawalSchedule:
+    """Divide target evenly across all FYs whose anchor falls in the horizon."""
+    anchors = fy_anchor_months(portfolio, horizon_months)
+    if not anchors:
+        return WithdrawalSchedule(
+            tranches=[], total_withdrawal=0.0, total_tax=0.0, total_net=0.0,
+            exemption_utilization={}, strategy="equal_split",
+            target_amount=target_amount, shortfall=target_amount,
+        )
+
+    per_tranche = float(target_amount) / len(anchors)
+    tranches: list[WithdrawalTranche] = []
+    for fy_label, anchor_m, anchor_d in anchors:
+        proj = _projected_portfolio_value_at_month(
+            portfolio, paths, anchor_m, risk_aware
+        )
+        tranches.append(_build_tranche(
+            portfolio, fy_label, anchor_m, anchor_d,
+            per_tranche, proj, portfolio.tax_state.fy_exemption_limit,
+        ))
+
+    total_withdrawal = sum(t.total_amount for t in tranches)
+    total_tax = sum(t.tax for t in tranches)
+    exemption_util = {
+        t.fy_label: min(
+            t.realized_gain, portfolio.tax_state.fy_exemption_limit
+        ) / portfolio.tax_state.fy_exemption_limit
+        for t in tranches
+    }
+    return WithdrawalSchedule(
+        tranches=tranches,
+        total_withdrawal=total_withdrawal,
+        total_tax=total_tax,
+        total_net=total_withdrawal - total_tax,
+        exemption_utilization=exemption_util,
+        strategy="equal_split",
+        target_amount=target_amount,
+        shortfall=max(0.0, target_amount - total_withdrawal),
+    )
+
+
+def _front_loaded_schedule(
+    portfolio: Portfolio,
+    target_amount: float,
+    horizon_months: int,
+    paths: dict[str, np.ndarray],
+    risk_aware: bool,
+) -> WithdrawalSchedule:
+    """Withdraw the entire target in the current FY at month 1."""
+    anchors = fy_anchor_months(portfolio, horizon_months)
+    if not anchors:
+        return WithdrawalSchedule(
+            tranches=[], total_withdrawal=0.0, total_tax=0.0, total_net=0.0,
+            exemption_utilization={}, strategy="front_loaded",
+            target_amount=target_amount, shortfall=target_amount,
+        )
+    fy_label, anchor_m, anchor_d = anchors[0]
+    proj = _projected_portfolio_value_at_month(
+        portfolio, paths, anchor_m, risk_aware
+    )
+    tranche = _build_tranche(
+        portfolio, fy_label, anchor_m, anchor_d,
+        float(target_amount), proj, portfolio.tax_state.fy_exemption_limit,
+    )
+    return WithdrawalSchedule(
+        tranches=[tranche],
+        total_withdrawal=tranche.total_amount,
+        total_tax=tranche.tax,
+        total_net=tranche.net_received,
+        exemption_utilization={
+            tranche.fy_label: min(
+                tranche.realized_gain, portfolio.tax_state.fy_exemption_limit
+            ) / portfolio.tax_state.fy_exemption_limit
+        },
+        strategy="front_loaded",
+        target_amount=target_amount,
+        shortfall=0.0,
+    )
+
+
+def _back_loaded_schedule(
+    portfolio: Portfolio,
+    target_amount: float,
+    horizon_months: int,
+    paths: dict[str, np.ndarray],
+    risk_aware: bool,
+) -> WithdrawalSchedule:
+    """Withdraw the entire target in the LAST FY of the horizon."""
+    anchors = fy_anchor_months(portfolio, horizon_months)
+    if not anchors:
+        return WithdrawalSchedule(
+            tranches=[], total_withdrawal=0.0, total_tax=0.0, total_net=0.0,
+            exemption_utilization={}, strategy="back_loaded",
+            target_amount=target_amount, shortfall=target_amount,
+        )
+    fy_label, anchor_m, anchor_d = anchors[-1]
+    proj = _projected_portfolio_value_at_month(
+        portfolio, paths, anchor_m, risk_aware
+    )
+    tranche = _build_tranche(
+        portfolio, fy_label, anchor_m, anchor_d,
+        float(target_amount), proj, portfolio.tax_state.fy_exemption_limit,
+    )
+    return WithdrawalSchedule(
+        tranches=[tranche],
+        total_withdrawal=tranche.total_amount,
+        total_tax=tranche.tax,
+        total_net=tranche.net_received,
+        exemption_utilization={
+            tranche.fy_label: min(
+                tranche.realized_gain, portfolio.tax_state.fy_exemption_limit
+            ) / portfolio.tax_state.fy_exemption_limit
+        },
+        strategy="back_loaded",
+        target_amount=target_amount,
+        shortfall=0.0,
+    )
