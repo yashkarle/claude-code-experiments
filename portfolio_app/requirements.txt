@@ -16,3 +16,6 @@ scipy>=1.13,<2
 
 # Utility
 python-dateutil>=2.9,<3
+
+# Testing
+pytest>=8.0,<9
