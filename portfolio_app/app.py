@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import arviz as az
 from plotly.subplots import make_subplots
 
 from portfolio import (
@@ -440,7 +441,17 @@ with tab2:
     else:
         allocations = {"Parag Parikh Flexi Cap": 0.0, "ICICI Pru Large Cap": target_amount}
 
-    tax_info = compute_portfolio_withdrawal_tax(portfolio, allocations, proj_at_horizon)
+    # Use a fresh TaxState if the horizon crosses the FY boundary (Apr 1 reset)
+    # — already_realized from a prior FY doesn't reduce next FY's exemption.
+    horizon_tax_state = portfolio.tax_state
+    if fy_boundaries and horizon >= fy_boundaries[0]:
+        horizon_tax_state = TaxState(
+            fy_exemption_limit=portfolio.tax_state.fy_exemption_limit,
+            already_realized=0.0,
+        )
+    tax_info = compute_portfolio_withdrawal_tax(
+        portfolio, allocations, proj_at_horizon, tax_state_override=horizon_tax_state
+    )
 
     # Update recommendation with target
     rec_with_target = compute_todays_recommendation(portfolio, target_amount)
