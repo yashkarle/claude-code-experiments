@@ -21,8 +21,11 @@ from portfolio import (
     FundHolding,
     Portfolio,
     TaxState,
+    WithdrawalSchedule,
+    WithdrawalTranche,
     compute_portfolio_withdrawal_tax,
     compute_todays_recommendation,
+    optimize_multi_fy_withdrawal,
     projected_gain_ratio,
     suggest_proportional_split,
 )
@@ -146,7 +149,7 @@ def get_idata(
         ["Parag Parikh Flexi Cap", "ICICI Pru Large Cap"],
         observed,
     )
-    return run_inference(model, target_accept=0.95)
+    return run_inference(model, target_accept=0.98)
 
 
 @st.cache_data(show_spinner=False)
@@ -173,7 +176,7 @@ def get_paths_and_bands(
 # Run inference (with spinner) and cache result in session state
 # ---------------------------------------------------------------------------
 
-with st.spinner("Running Bayesian inference (first load ~20s)…"):
+with st.spinner("Running Bayesian inference (first load ~45s)…"):
     idata = get_idata(
         pp_inv, pp_cur, pp_xirr,
         ic_inv, ic_cur, ic_xirr,
@@ -184,6 +187,7 @@ with st.spinner("Running Bayesian inference (first load ~20s)…"):
 paths, bands, scenarios = get_paths_and_bands(
     id(idata), pp_cur, ic_cur
 )
+st.session_state["_cached_paths"] = paths
 
 # Convenience: month index array and date labels
 N_MONTHS = 36
@@ -250,11 +254,44 @@ st.markdown(
 st.divider()
 
 # ---------------------------------------------------------------------------
+# Multi-FY optimizer cache wrapper
+# ---------------------------------------------------------------------------
+
+@st.cache_data(show_spinner=False)
+def cached_multi_fy_schedule(
+    _paths_id: int,
+    _pp_inv: float, _pp_cur: float,
+    _ic_inv: float, _ic_cur: float,
+    _already_realized: float,
+    target_amount: float,
+    horizon_months: int,
+    strategy: str,
+    risk_aware: bool,
+):
+    """Cache key includes all portfolio scalars + optimizer inputs."""
+    _paths = st.session_state["_cached_paths"]
+    return optimize_multi_fy_withdrawal(
+        portfolio=portfolio,
+        target_amount=target_amount,
+        horizon_months=horizon_months,
+        projected_paths=_paths,
+        strategy=strategy,  # type: ignore[arg-type]
+        risk_aware=risk_aware,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["📈 Portfolio Trajectory", "💰 Withdrawal Planner", "🧾 Tax Impact", "🌐 Scenarios"]
+tab1, tab2, tab2b, tab3, tab4 = st.tabs(
+    [
+        "📈 Portfolio Trajectory",
+        "💰 Withdrawal Planner",
+        "🗓️ Multi-FY Plan",
+        "🧾 Tax Impact",
+        "🌐 Scenarios",
+    ]
 )
 
 # ============================================================
@@ -756,3 +793,260 @@ with tab4:
             st.dataframe(summary[["mean", "sd", "hdi_3%", "hdi_97%", "r_hat"]], use_container_width=True)
         except Exception:
             st.info("Run a full model refresh to see diagnostics.")
+
+
+# ============================================================
+# TAB 2b — Multi-FY Plan
+# ============================================================
+
+with tab2b:
+    st.subheader("Multi-FY Withdrawal Optimizer")
+    st.caption(
+        "Plan a large withdrawal across multiple Indian financial years to "
+        "maximise use of the ₹1,25,000 LTCG exemption per FY. The default "
+        "strategy fills each FY's exemption exactly in chronological order."
+    )
+
+    mcol_in, mcol_out = st.columns([2, 3])
+
+    with mcol_in:
+        m_target = st.number_input(
+            "Total amount to withdraw (₹)",
+            min_value=10_000.0,
+            max_value=float(portfolio.total_current_value * 3),
+            value=2_000_000.0,
+            step=50_000.0,
+            format="%.0f",
+            key="multi_fy_target",
+        )
+        m_horizon_years = st.slider(
+            "Time horizon (years)",
+            min_value=1, max_value=5, value=3,
+            key="multi_fy_horizon_years",
+        )
+        m_strategy_label = st.radio(
+            "Strategy",
+            [
+                "Tax-minimising (recommended)",
+                "Equal split across FYs",
+                "Front-loaded (this FY)",
+                "Back-loaded (last FY)",
+            ],
+            index=0,
+            key="multi_fy_strategy",
+        )
+        m_risk_aware = st.toggle(
+            "Risk-aware (use p10 instead of p50)",
+            value=False,
+            help=(
+                "If on, the optimizer assumes the pessimistic 10th-percentile "
+                "growth path. This produces a lower gain ratio and a slightly "
+                "larger zero-tax withdrawal window per FY."
+            ),
+            key="multi_fy_risk_aware",
+        )
+
+    strategy_map = {
+        "Tax-minimising (recommended)": "tax_minimizing",
+        "Equal split across FYs": "equal_split",
+        "Front-loaded (this FY)": "front_loaded",
+        "Back-loaded (last FY)": "back_loaded",
+    }
+    m_strategy = strategy_map[m_strategy_label]
+    m_horizon_months = m_horizon_years * 12
+
+    schedule = cached_multi_fy_schedule(
+        id(paths),
+        pp_inv, pp_cur, ic_inv, ic_cur, already_realized,
+        m_target, m_horizon_months, m_strategy, m_risk_aware,
+    )
+    baseline = cached_multi_fy_schedule(
+        id(paths),
+        pp_inv, pp_cur, ic_inv, ic_cur, already_realized,
+        m_target, m_horizon_months, "front_loaded", m_risk_aware,
+    )
+    tax_saved = max(0.0, baseline.total_tax - schedule.total_tax)
+
+    with mcol_out:
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric(
+            "Total Tax",
+            f"₹{schedule.total_tax:,.0f}",
+            delta=f"{schedule.effective_tax_rate*100:.2f}% effective",
+            delta_color="inverse",
+        )
+        s2.metric(
+            "Net Received",
+            f"₹{schedule.total_net:,.0f}",
+        )
+        s3.metric(
+            "Tranches",
+            f"{len(schedule.tranches)}",
+            delta=f"{m_horizon_years}-year horizon",
+        )
+        s4.metric(
+            "Tax Saved vs Single Withdrawal",
+            f"₹{tax_saved:,.0f}",
+            delta=(
+                "vs front-loaded baseline"
+                if tax_saved > 0
+                else "no savings (single tranche fits)"
+            ),
+        )
+
+        if schedule.shortfall > 0:
+            st.warning(
+                f"Could only schedule ₹{schedule.total_withdrawal:,.0f} of the "
+                f"₹{m_target:,.0f} target within {m_horizon_years} year(s). "
+                f"Shortfall: ₹{schedule.shortfall:,.0f}."
+            )
+
+    st.markdown("#### Tranche Schedule")
+    if not schedule.tranches:
+        st.info("No tranches scheduled. Adjust the target or horizon.")
+    else:
+        table_rows = []
+        for t in schedule.tranches:
+            table_rows.append({
+                "FY": t.fy_label,
+                "Date": t.date.strftime("%b %Y"),
+                "Month #": t.month_index,
+                "Amount (₹)": f"₹{t.total_amount:,.0f}",
+                "Realised Gain (₹)": f"₹{t.realized_gain:,.0f}",
+                "Taxable Gain (₹)": f"₹{t.taxable_gain:,.0f}",
+                "Tax (₹)": f"₹{t.tax:,.0f}",
+                "Net (₹)": f"₹{t.net_received:,.0f}",
+                "Exemption Used": f"{schedule.exemption_utilization.get(t.fy_label, 0)*100:.0f}%",
+            })
+        st.dataframe(
+            pd.DataFrame(table_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.markdown("#### FY Exemption Utilisation")
+    if schedule.exemption_utilization:
+        util_labels = list(schedule.exemption_utilization.keys())
+        util_values = [
+            min(1.0, schedule.exemption_utilization[lbl]) * 100
+            for lbl in util_labels
+        ]
+        fig_util = go.Figure(go.Bar(
+            x=util_labels,
+            y=util_values,
+            marker_color=[
+                "#2ca02c" if v >= 99 else ("#ffbb33" if v >= 60 else "#aec7e8")
+                for v in util_values
+            ],
+            text=[f"{v:.0f}%" for v in util_values],
+            textposition="outside",
+            hovertemplate="%{x}<br>Exemption used: %{y:.1f}%<extra></extra>",
+        ))
+        fig_util.update_layout(
+            yaxis_title="₹1.25L Exemption Used",
+            yaxis_range=[0, 115],
+            height=320,
+            margin=dict(t=20, b=20),
+            showlegend=False,
+        )
+        fig_util.update_yaxes(ticksuffix="%")
+        st.plotly_chart(fig_util, use_container_width=True)
+
+    st.markdown("#### Withdrawal Timeline")
+    if schedule.tranches:
+        timeline_labels = [t.fy_label for t in schedule.tranches]
+        timeline_amounts = [t.total_amount for t in schedule.tranches]
+        timeline_taxes = [t.tax for t in schedule.tranches]
+
+        fig_tl = go.Figure()
+        fig_tl.add_trace(go.Bar(
+            x=timeline_labels,
+            y=[a - tx for a, tx in zip(timeline_amounts, timeline_taxes)],
+            name="Net received",
+            marker_color="#2ca02c",
+            hovertemplate="%{x}<br>Net: ₹%{y:,.0f}<extra></extra>",
+        ))
+        fig_tl.add_trace(go.Bar(
+            x=timeline_labels,
+            y=timeline_taxes,
+            name="Tax",
+            marker_color="#d62728",
+            hovertemplate="%{x}<br>Tax: ₹%{y:,.0f}<extra></extra>",
+        ))
+        for t in schedule.tranches:
+            fig_tl.add_annotation(
+                x=t.fy_label,
+                y=0,
+                xref="x", yref="paper",
+                yanchor="top", yshift=-30,
+                text=t.date.strftime("%b %Y"),
+                showarrow=False,
+                font=dict(size=10, color="gray"),
+            )
+        fig_tl.update_layout(
+            barmode="stack",
+            height=380,
+            yaxis_title="Rupees",
+            xaxis_title="Financial Year",
+            margin=dict(t=20, b=70),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        )
+        fig_tl.update_yaxes(tickformat=",.0f", tickprefix="₹")
+        st.plotly_chart(fig_tl, use_container_width=True)
+    else:
+        st.info("No timeline to display.")
+
+    with st.expander("Compare strategies side-by-side"):
+        comparison_rows = []
+        for strat_name, strat_label in [
+            ("tax_minimizing", "Tax-minimising"),
+            ("equal_split", "Equal split"),
+            ("front_loaded", "Front-loaded"),
+            ("back_loaded", "Back-loaded"),
+        ]:
+            sch = cached_multi_fy_schedule(
+                id(paths),
+                pp_inv, pp_cur, ic_inv, ic_cur, already_realized,
+                m_target, m_horizon_months, strat_name, m_risk_aware,
+            )
+            comparison_rows.append({
+                "Strategy": strat_label,
+                "Tranches": len(sch.tranches),
+                "Total Tax (₹)": f"₹{sch.total_tax:,.0f}",
+                "Net Received (₹)": f"₹{sch.total_net:,.0f}",
+                "Effective Rate": f"{sch.effective_tax_rate*100:.2f}%",
+            })
+        st.dataframe(
+            pd.DataFrame(comparison_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.caption(
+            "Tax-minimising fills each FY's ₹1.25L exemption exactly in "
+            "chronological order. Front-loaded compresses everything into the "
+            "current FY (worst case for tax). Back-loaded delays the entire "
+            "withdrawal to the final FY (also worst case)."
+        )
+
+    with st.expander("How it works"):
+        st.markdown(
+            """
+**Algorithm:** Greedy fill of each FY's ₹1,25,000 LTCG exemption in
+chronological order. Because the LTCG tax rule is piecewise linear (0% below
+the exemption, 12.5% above), filling each FY exactly is a strong heuristic.
+
+**Per-FY anchor month:** the first month of each FY within the horizon. The
+projected portfolio value at that month determines the blended gain ratio
+used to compute the maximum zero-tax rupee amount for that FY.
+
+**Gain ratio drift:** because the cost basis is fixed but the projected
+value grows, the blended gain ratio increases each FY. This means the rupee
+amount that fits inside ₹1.25L of LTCG **shrinks** every year — the
+optimizer accounts for this automatically.
+
+**Risk-aware mode:** uses the 10th-percentile (pessimistic) projected value
+instead of the median. Lower projected value → lower gain ratio → larger
+zero-tax window per FY (you can withdraw slightly more rupees tax-free in
+the current FY).
+"""
+        )
