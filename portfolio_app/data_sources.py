@@ -84,6 +84,8 @@ def fetch_fund_nav(scheme_code: int, ttl_hours: int = 24) -> pd.DataFrame:
     If the cache file exists and is younger than `ttl_hours`, it is returned
     without a network call.
     """
+    import warnings
+
     cache_path = CACHE_DIR / f"mf_{scheme_code}.parquet"
     if cache_path.exists():
         age_hours = (time.time() - cache_path.stat().st_mtime) / 3600
@@ -91,13 +93,26 @@ def fetch_fund_nav(scheme_code: int, ttl_hours: int = 24) -> pd.DataFrame:
             return pd.read_parquet(cache_path)
 
     url = f"{MFAPI_BASE}/{scheme_code}"
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    payload = response.json()
-    df = _parse_mfapi_payload(payload)
-
-    df.to_parquet(cache_path)
-    return df
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        payload = response.json()
+        df = _parse_mfapi_payload(payload)
+        df.to_parquet(cache_path)
+        return df
+    except Exception as exc:
+        # If the API is down but we have any stale cache, serve it with a warning.
+        if cache_path.exists():
+            warnings.warn(
+                f"mfapi.in request failed for scheme {scheme_code} ({exc}); "
+                f"serving stale cache from {cache_path.stat().st_mtime:.0f}.",
+                stacklevel=2,
+            )
+            return pd.read_parquet(cache_path)
+        raise RuntimeError(
+            f"mfapi.in unavailable for scheme {scheme_code} and no local cache exists. "
+            f"Original error: {exc}"
+        ) from exc
 
 
 def nav_to_daily_returns(nav_df: pd.DataFrame) -> pd.Series:
