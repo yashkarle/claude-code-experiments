@@ -24,8 +24,7 @@ class FundHolding:
     name: str
     invested: float        # cost basis ₹
     current_value: float   # current market value ₹
-    xirr: float            # annualised return as decimal (e.g. 0.1359 for 13.59%)
-    is_long_term: bool = True  # held >12 months → LTCG treatment
+    scheme_code: int = 0   # mfapi.in scheme code (0 = unknown, skip NAV fetch)
 
     @property
     def unrealized_gain(self) -> float:
@@ -37,11 +36,6 @@ class FundHolding:
         if self.current_value == 0:
             return 0.0
         return max(0.0, self.unrealized_gain / self.current_value)
-
-    @property
-    def monthly_return(self) -> float:
-        """Geometric monthly return derived from annual XIRR."""
-        return (1 + self.xirr) ** (1 / 12) - 1
 
 
 @dataclass
@@ -119,24 +113,29 @@ class Portfolio:
 # Default portfolio (Apr 2026 actuals from screenshot)
 # ---------------------------------------------------------------------------
 
+# NOTE: scheme codes were verified against https://api.mfapi.in/mf/search
+# on 2026-04-12. If the search endpoint returns different codes, update
+# these before first run — the factor model will fail to fetch NAV history otherwise.
+#   Parag Parikh Flexi Cap Direct Growth → 122639
+#   ICICI Prudential Large Cap Direct Growth → 120586
 DEFAULT_PORTFOLIO = Portfolio(
     funds=[
         FundHolding(
             name="Parag Parikh Flexi Cap",
             invested=903_555.0,
             current_value=1_396_100.0,
-            xirr=0.1359,
+            scheme_code=122639,
         ),
         FundHolding(
             name="ICICI Pru Large Cap",
             invested=674_966.0,
             current_value=976_571.0,
-            xirr=0.1320,
+            scheme_code=120586,
         ),
     ],
     tax_state=TaxState(
         fy_exemption_limit=125_000.0,
-        already_realized=0.0,  # FY26-27 fresh start; all prior sells in FY25-26
+        already_realized=0.0,
     ),
     as_of_date=datetime.date(2026, 4, 11),
 )
