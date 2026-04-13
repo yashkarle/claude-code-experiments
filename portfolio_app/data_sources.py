@@ -37,6 +37,14 @@ CACHE_DIR.mkdir(exist_ok=True)
 
 MFAPI_BASE = "https://api.mfapi.in/mf"
 
+# Recorded fixture files used as offline fallback when mfapi.in is unreachable
+# and no parquet cache exists yet. Keys are scheme codes.
+_FIXTURE_DIR = Path(__file__).parent / "tests" / "fixtures"
+_OFFLINE_FIXTURES: dict[int, str] = {
+    122639: "pp_flexi_cap.json",
+    120586: "icici_large_cap.json",
+}
+
 # Yahoo tickers — kept as module constants so tests can patch them
 INDEX_TICKERS = {
     "nifty": "^NSEI",
@@ -101,17 +109,33 @@ def fetch_fund_nav(scheme_code: int, ttl_hours: int = 24) -> pd.DataFrame:
         df.to_parquet(cache_path)
         return df
     except Exception as exc:
-        # If the API is down but we have any stale cache, serve it with a warning.
+        # Priority 1: stale parquet cache (any age)
         if cache_path.exists():
             warnings.warn(
                 f"mfapi.in request failed for scheme {scheme_code} ({exc}); "
-                f"serving stale cache from {cache_path.stat().st_mtime:.0f}.",
+                "serving stale parquet cache.",
                 stacklevel=2,
             )
             return pd.read_parquet(cache_path)
+
+        # Priority 2: bundled fixture file (offline cold-start fallback)
+        fixture_name = _OFFLINE_FIXTURES.get(scheme_code)
+        if fixture_name:
+            fixture_path = _FIXTURE_DIR / fixture_name
+            if fixture_path.exists():
+                warnings.warn(
+                    f"mfapi.in unreachable for scheme {scheme_code}; "
+                    "loading bundled fixture as offline fallback. "
+                    "Data is synthetic — re-run when the API recovers.",
+                    stacklevel=2,
+                )
+                df = load_nav_from_fixture(fixture_path)
+                df.to_parquet(cache_path)   # seed cache so next run is instant
+                return df
+
         raise RuntimeError(
-            f"mfapi.in unavailable for scheme {scheme_code} and no local cache exists. "
-            f"Original error: {exc}"
+            f"mfapi.in unavailable for scheme {scheme_code}, no parquet cache, "
+            f"and no bundled fixture. Original error: {exc}"
         ) from exc
 
 
