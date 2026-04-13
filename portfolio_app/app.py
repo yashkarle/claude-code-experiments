@@ -21,21 +21,24 @@ from portfolio import (
     FundHolding,
     Portfolio,
     TaxState,
-    WithdrawalSchedule,
-    WithdrawalTranche,
     compute_portfolio_withdrawal_tax,
     compute_todays_recommendation,
-    optimize_multi_fy_withdrawal,
     projected_gain_ratio,
     suggest_proportional_split,
 )
-from models import (
-    build_hierarchical_model,
+from data_sources import INDEX_TICKERS, load_history_for_funds
+from factor_model import (
+    build_factor_model,
     compute_percentile_bands,
-    compute_withdrawal_probability,
-    generate_posterior_predictive,
-    generate_scenario_paths,
-    run_inference,
+    current_factor_regime,
+    generate_factor_forecast,
+    prepare_training_data,
+    run_factor_inference,
+)
+from withdrawal_planner import (
+    ExitTimingRecord,
+    build_exit_timing_table,
+    recommend_today,
 )
 
 # ---------------------------------------------------------------------------
@@ -83,9 +86,6 @@ with st.sidebar:
     pp_cur = st.number_input(
         "Current Value (₹)", value=1_396_100.0, step=1000.0, format="%.0f", key="pp_cur"
     )
-    pp_xirr = st.number_input(
-        "XIRR (%)", value=13.59, step=0.01, format="%.2f", key="pp_xirr"
-    ) / 100.0
 
     st.subheader("ICICI Pru Large Cap")
     ic_inv = st.number_input(
@@ -94,9 +94,6 @@ with st.sidebar:
     ic_cur = st.number_input(
         "Current Value (₹)", value=976_571.0, step=1000.0, format="%.0f", key="ic_cur"
     )
-    ic_xirr = st.number_input(
-        "XIRR (%)", value=13.20, step=0.01, format="%.2f", key="ic_xirr"
-    ) / 100.0
 
     st.subheader("Tax State (FY 26-27)")
     already_realized = st.number_input(
@@ -121,8 +118,18 @@ with st.sidebar:
 
 portfolio = Portfolio(
     funds=[
-        FundHolding("Parag Parikh Flexi Cap", pp_inv, pp_cur, pp_xirr),
-        FundHolding("ICICI Pru Large Cap", ic_inv, ic_cur, ic_xirr),
+        FundHolding(
+            name="Parag Parikh Flexi Cap",
+            invested=pp_inv,
+            current_value=pp_cur,
+            scheme_code=122639,
+        ),
+        FundHolding(
+            name="ICICI Pru Large Cap",
+            invested=ic_inv,
+            current_value=ic_cur,
+            scheme_code=120586,
+        ),
     ],
     tax_state=TaxState(fy_exemption_limit=125_000.0, already_realized=already_realized),
     as_of_date=datetime.date.today(),
@@ -130,73 +137,105 @@ portfolio = Portfolio(
 
 fund_names = [f.name for f in portfolio.funds]
 current_values = np.array([f.current_value for f in portfolio.funds])
+scheme_codes = {f.name: f.scheme_code for f in portfolio.funds}
 
 # ---------------------------------------------------------------------------
-# Cached MCMC inference
+# Phase 1: load historical NAV + factor data (cached parquet under .cache/)
 # ---------------------------------------------------------------------------
 
 @st.cache_resource(show_spinner=False)
-def get_idata(
-    _pp_inv: float, _pp_cur: float, _pp_xirr: float,
-    _ic_inv: float, _ic_cur: float, _ic_xirr: float,
-    _already_realized: float,
-):
-    observed = np.array([
-        (1 + _pp_xirr) ** (1 / 12) - 1,
-        (1 + _ic_xirr) ** (1 / 12) - 1,
-    ])
-    model = build_hierarchical_model(
-        ["Parag Parikh Flexi Cap", "ICICI Pru Large Cap"],
-        observed,
+def get_history(_schemes_key: str):
+    """Load NAV + factor history. Keyed by a string of sorted scheme codes."""
+    schemes = dict(code.split("=") for code in _schemes_key.split(","))
+    schemes = {k: int(v) for k, v in schemes.items()}
+    return load_history_for_funds(schemes, lookback_years=5)
+
+
+schemes_key = ",".join(f"{n}={c}" for n, c in sorted(scheme_codes.items()))
+
+with st.spinner("Fetching NAV + market factor history (first load ~20s)…"):
+    nav_df, factors_df = get_history(schemes_key)
+
+# ---------------------------------------------------------------------------
+# Phase 2: prepare training data + Bayesian factor inference
+# ---------------------------------------------------------------------------
+
+@st.cache_resource(show_spinner=False)
+def get_factor_idata(_schemes_key: str, _nrows: int):
+    """Build + sample the factor model. Keyed by scheme codes and row count."""
+    fund_returns, factor_returns = prepare_training_data(nav_df, factors_df)
+    model = build_factor_model(
+        fund_names=list(fund_returns.columns),
+        fund_returns=fund_returns.values,
+        factor_returns=factor_returns.values,
     )
-    return run_inference(model, target_accept=0.98)
+    return run_factor_inference(model)
+
+
+with st.spinner("Fitting Bayesian factor model (first load ~60–120s)…"):
+    idata = get_factor_idata(schemes_key, len(nav_df))
+    st.session_state["_cached_idata"] = idata
+
+# ---------------------------------------------------------------------------
+# Two horizons: long (36 months, trajectory/tax/scenarios) + short (≤60 business
+# days, Withdrawal Planner). Both use the factor model; block bootstrap just
+# changes n_business_days.
+# ---------------------------------------------------------------------------
+
+N_BDAYS_LONG = 252 * 3        # ~3 years
 
 
 @st.cache_data(show_spinner=False)
-def get_paths_and_bands(
-    _idata_id: int,
-    _pp_cur: float, _ic_cur: float,
-    n_months: int = 36,
-):
-    idata = st.session_state["_cached_idata"]
-    cur = np.array([_pp_cur, _ic_cur])
-    paths = generate_posterior_predictive(
-        idata, ["Parag Parikh Flexi Cap", "ICICI Pru Large Cap"],
-        cur, n_months=n_months,
+def get_long_forecast(_schemes_key: str, _cur_tuple: tuple):
+    fund_returns, factor_returns = prepare_training_data(nav_df, factors_df)
+    paths = generate_factor_forecast(
+        idata=st.session_state["_cached_idata"],
+        fund_names=fund_names,
+        factor_returns_history=factor_returns.values,
+        current_values=np.array(_cur_tuple),
+        n_business_days=N_BDAYS_LONG,
+        n_samples=2000,
+        block_size=15,
+        random_seed=42,
     )
-    bands = compute_percentile_bands(paths)
-    scenarios = generate_scenario_paths(
-        idata, ["Parag Parikh Flexi Cap", "ICICI Pru Large Cap"],
-        cur, n_months=n_months,
+    return paths, compute_percentile_bands(paths)
+
+
+@st.cache_data(show_spinner=False)
+def get_short_forecast(_schemes_key: str, _cur_tuple: tuple, _n_bdays: int):
+    fund_returns, factor_returns = prepare_training_data(nav_df, factors_df)
+    paths = generate_factor_forecast(
+        idata=st.session_state["_cached_idata"],
+        fund_names=fund_names,
+        factor_returns_history=factor_returns.values,
+        current_values=np.array(_cur_tuple),
+        n_business_days=_n_bdays,
+        n_samples=3000,
+        block_size=5,
+        random_seed=99,
     )
-    return paths, bands, scenarios
+    return paths, compute_percentile_bands(paths)
 
 
-# ---------------------------------------------------------------------------
-# Run inference (with spinner) and cache result in session state
-# ---------------------------------------------------------------------------
+cur_tuple = tuple(current_values)
+long_paths, long_bands = get_long_forecast(schemes_key, cur_tuple)
 
-with st.spinner("Running Bayesian inference (first load ~45s)…"):
-    idata = get_idata(
-        pp_inv, pp_cur, pp_xirr,
-        ic_inv, ic_cur, ic_xirr,
-        already_realized,
-    )
-    st.session_state["_cached_idata"] = idata
-
-paths, bands, scenarios = get_paths_and_bands(
-    id(idata), pp_cur, ic_cur
-)
-st.session_state["_cached_paths"] = paths
-
-# Convenience: month index array and date labels
-N_MONTHS = 36
-months_idx = np.arange(1, N_MONTHS + 1)
+# Long-horizon business-day index → monthly date labels for Tab 1/3/4.
+# We downsample from N_BDAYS_LONG to a monthly cadence by picking every ~21 bdays.
 today = datetime.date.today()
-date_labels = [
-    (today + datetime.timedelta(days=30 * int(m))).strftime("%b %Y")
-    for m in months_idx
-]
+long_bdays = pd.bdate_range(today, periods=N_BDAYS_LONG + 1)[1:]
+long_month_idx = np.arange(0, N_BDAYS_LONG, 21)
+long_date_labels = [long_bdays[int(i)].strftime("%b %Y") for i in long_month_idx]
+
+# For Tab 1, use the downsampled monthly points; reuse `bands` name to minimise churn below.
+bands = {
+    k: {pct: v[long_month_idx] for pct, v in bnd.items()}
+    for k, bnd in long_bands.items()
+}
+paths = {k: v[:, long_month_idx] for k, v in long_paths.items()}
+date_labels = long_date_labels
+months_idx = np.arange(1, len(date_labels) + 1)
+N_MONTHS = len(date_labels)
 fy_boundaries = portfolio.fy_boundary_months(N_MONTHS)
 
 # ---------------------------------------------------------------------------
@@ -254,41 +293,13 @@ st.markdown(
 st.divider()
 
 # ---------------------------------------------------------------------------
-# Multi-FY optimizer cache wrapper
-# ---------------------------------------------------------------------------
-
-@st.cache_data(show_spinner=False)
-def cached_multi_fy_schedule(
-    _paths_id: int,
-    _pp_inv: float, _pp_cur: float,
-    _ic_inv: float, _ic_cur: float,
-    _already_realized: float,
-    target_amount: float,
-    horizon_months: int,
-    strategy: str,
-    risk_aware: bool,
-):
-    """Cache key includes all portfolio scalars + optimizer inputs."""
-    _paths = st.session_state["_cached_paths"]
-    return optimize_multi_fy_withdrawal(
-        portfolio=portfolio,
-        target_amount=target_amount,
-        horizon_months=horizon_months,
-        projected_paths=_paths,
-        strategy=strategy,  # type: ignore[arg-type]
-        risk_aware=risk_aware,
-    )
-
-
-# ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab1, tab2, tab2b, tab3, tab4 = st.tabs(
+tab1, tab2, tab3, tab4 = st.tabs(
     [
         "📈 Portfolio Trajectory",
         "💰 Withdrawal Planner",
-        "🗓️ Multi-FY Plan",
         "🧾 Tax Impact",
         "🌐 Scenarios",
     ]
@@ -301,7 +312,8 @@ tab1, tab2, tab2b, tab3, tab4 = st.tabs(
 with tab1:
     st.subheader("Fund-Level Growth Forecast — 80% Credible Band")
     st.caption(
-        "Shaded band = 10th–90th percentile of 2,000 Bayesian Monte Carlo paths. "
+        "Shaded band = 10th–90th percentile of 2,000 Bayesian factor-model paths "
+        "(historical NAV calibrated against NIFTY, SENSEX, VIX, gold, USD/INR, crude). "
         "Dashed orange lines mark FY start (Apr 1)."
     )
 
@@ -432,166 +444,214 @@ with tab1:
 
 
 # ============================================================
-# TAB 2 — Withdrawal Planner
+# TAB 2 — Withdrawal Planner (Optimal Exit Timing)
 # ============================================================
 
 with tab2:
-    st.subheader("Withdrawal Planner")
+    st.subheader("Withdrawal Planner — Optimal Exit Timing")
     st.caption(
-        "Enter how much you need and when. The app shows probability of success "
-        "across months and the estimated tax impact."
+        "Given a hard deadline, the planner scores every business day between "
+        "today and the deadline on a risk-adjusted basis and recommends the "
+        "best day to exit. The question it answers is WHEN to withdraw, not "
+        "whether you have enough."
     )
 
-    col_in, col_out = st.columns([2, 3])
+    ctrl_col, status_col = st.columns([2, 3])
 
-    with col_in:
-        target_amount = st.number_input(
+    with ctrl_col:
+        wp_target = st.number_input(
             "Target withdrawal amount (₹)",
             min_value=10_000.0,
             max_value=float(portfolio.total_current_value * 2),
-            value=500_000.0,
+            value=1_400_000.0,
             step=10_000.0,
             format="%.0f",
+            key="wp_target",
         )
-        horizon = st.slider(
-            "Time horizon (months)",
-            min_value=1, max_value=N_MONTHS, value=6,
+        wp_deadline = st.date_input(
+            "Hard deadline",
+            value=today + datetime.timedelta(days=60),
+            min_value=today,
+            max_value=today + datetime.timedelta(days=180),
+            key="wp_deadline",
+            help="Latest date by which you MUST have withdrawn the target amount.",
         )
-        split_mode = st.radio(
+        wp_risk = st.slider(
+            "Risk aversion (λ)",
+            min_value=0.0, max_value=1.0, value=0.30, step=0.05,
+            help="0 = pure expected-value maximiser · 1 = conservative (maximise P10)",
+            key="wp_risk",
+        )
+        wp_split_mode = st.radio(
             "Fund split",
             ["Proportional to current value", "All from PP Flexi Cap", "All from ICICI Large Cap"],
-            index=0,
+            index=0, key="wp_split",
         )
 
-    # Compute withdrawal probability
-    p_sufficient, first_month = compute_withdrawal_probability(paths, target_amount)
+    # ---- Compute short-horizon forecast covering today → deadline ----
+    bdays_to_deadline = len(
+        pd.bdate_range(today + datetime.timedelta(days=1), wp_deadline)
+    )
+    bdays_to_deadline = max(1, bdays_to_deadline)
+    short_paths, short_bands = get_short_forecast(
+        schemes_key, cur_tuple, bdays_to_deadline
+    )
+    wp_table = build_exit_timing_table(
+        short_paths, target_amount=wp_target, risk_aversion=wp_risk
+    )
+    wp_rec = recommend_today(wp_table, risk_aversion=wp_risk)
+    wp_bdays_idx = pd.bdate_range(
+        today + datetime.timedelta(days=1), periods=bdays_to_deadline
+    )
+    wp_day_labels = [d.strftime("%a %d %b") for d in wp_bdays_idx]
 
-    # Determine allocation at horizon
-    proj_at_horizon = {
-        fn: float(bands[fn]["p50"][horizon - 1]) for fn in fund_names
-    }
+    # ---- Today's recommendation card ----
+    with status_col:
+        action_css = {"SELL_TODAY": "act-now", "WAIT": "consider"}[wp_rec["action"]]
+        action_emoji = {"SELL_TODAY": "🟢", "WAIT": "🟡"}[wp_rec["action"]]
+        action_label = {"SELL_TODAY": "SELL TODAY", "WAIT": "WAIT"}[wp_rec["action"]]
 
-    if split_mode == "Proportional to current value":
-        allocations = suggest_proportional_split(portfolio, target_amount, proj_at_horizon)
-    elif split_mode == "All from PP Flexi Cap":
-        allocations = {"Parag Parikh Flexi Cap": target_amount, "ICICI Pru Large Cap": 0.0}
-    else:
-        allocations = {"Parag Parikh Flexi Cap": 0.0, "ICICI Pru Large Cap": target_amount}
-
-    # Use a fresh TaxState if the horizon crosses the FY boundary (Apr 1 reset)
-    # — already_realized from a prior FY doesn't reduce next FY's exemption.
-    horizon_tax_state = portfolio.tax_state
-    if fy_boundaries and horizon >= fy_boundaries[0]:
-        horizon_tax_state = TaxState(
-            fy_exemption_limit=portfolio.tax_state.fy_exemption_limit,
-            already_realized=0.0,
+        st.markdown(
+            f"""
+            <div class="rec-box {action_css}">
+              <div class="rec-title">{action_emoji} {action_label}</div>
+              <div>{wp_rec['reason']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-    tax_info = compute_portfolio_withdrawal_tax(
-        portfolio, allocations, proj_at_horizon, tax_state_override=horizon_tax_state
+
+        opt = wp_table[wp_rec["optimal_day_index"]]
+        t1, t2, t3, t4 = st.columns(4)
+        t1.metric("Optimal exit day", f"Day {opt.day_index}",
+                  delta=wp_day_labels[opt.day_index] if opt.day_index < len(wp_day_labels) else "today")
+        t2.metric("Expected value then", f"₹{opt.mean:,.0f}",
+                  delta=f"{(opt.mean / portfolio.total_current_value - 1)*100:+.2f}% vs today")
+        t3.metric("Downside (P10)", f"₹{opt.p10:,.0f}",
+                  delta=f"{(opt.p10 / portfolio.total_current_value - 1)*100:+.2f}%")
+        t4.metric("Gain from waiting",
+                  f"₹{wp_rec['expected_gain_from_waiting']:,.0f}",
+                  delta=f"{wp_rec['regret_prob_if_waiting']*100:.0f}% regret prob")
+
+    st.divider()
+    st.markdown("#### Daily Portfolio Forecast — Today → Deadline")
+    st.caption(
+        "Median and 10–90% credible band of the portfolio value on every "
+        "business day between today and your deadline. Zoomed to your actual "
+        "exit window (not 36 months)."
     )
 
-    # Update recommendation with target
-    rec_with_target = compute_todays_recommendation(portfolio, target_amount)
-
-    with col_out:
-        r1c1, r1c2, r1c3, r1c4 = st.columns(4)
-        r1c1.metric(
-            "Earliest Safe Month",
-            f"Month {first_month}" if first_month != -1 else "Beyond 36m",
-            delta="≥80% confidence" if first_month != -1 else "Low probability",
-            delta_color="normal" if first_month != -1 else "inverse",
-        )
-        r1c2.metric(
-            f"P(Success) at Month {horizon}",
-            f"{p_sufficient[horizon-1]*100:.1f}%",
-            delta="above 80% threshold" if p_sufficient[horizon-1] >= 0.8 else "below 80%",
-            delta_color="normal" if p_sufficient[horizon-1] >= 0.8 else "inverse",
-        )
-        r1c3.metric(
-            "Estimated Tax",
-            f"₹{tax_info['total_tax']:,.0f}",
-            delta=f"{tax_info['effective_tax_rate']*100:.1f}% effective",
-            delta_color="inverse",
-        )
-        r1c4.metric(
-            "Net Received",
-            f"₹{tax_info['net_received']:,.0f}",
-            delta=f"after ₹{tax_info['total_tax']:,.0f} tax",
-        )
-
-    # Probability over time chart
-    st.markdown("#### Probability of Portfolio ≥ Target Over Time")
-    fig2 = go.Figure()
-    fig2.add_trace(go.Scatter(
-        x=list(months_idx), y=p_sufficient * 100,
-        mode="lines+markers",
-        line=dict(color="steelblue", width=2),
-        marker=dict(size=4),
-        hovertemplate="Month %{x}: %{y:.1f}%<extra></extra>",
-        name="P(portfolio ≥ target)",
+    fig_wp_fan = go.Figure()
+    fig_wp_fan.add_trace(go.Scatter(
+        x=wp_day_labels, y=short_bands["total"]["p10"],
+        mode="lines", line=dict(width=0), showlegend=False, hoverinfo="skip",
     ))
-    fig2.add_hline(
-        y=80, line_dash="dash", line_color="green", line_width=1.5,
-        annotation_text="80% confidence", annotation_position="right",
+    fig_wp_fan.add_trace(go.Scatter(
+        x=wp_day_labels, y=short_bands["total"]["p90"],
+        mode="lines", line=dict(width=0),
+        fill="tonexty", fillcolor="rgba(31,119,180,0.15)",
+        name="10–90% band", hoverinfo="skip",
+    ))
+    fig_wp_fan.add_trace(go.Scatter(
+        x=wp_day_labels, y=short_bands["total"]["p50"],
+        mode="lines", line=dict(color="rgb(31,119,180)", width=2.5),
+        name="Median",
+        hovertemplate="%{x}<br>Median: ₹%{y:,.0f}<extra></extra>",
+    ))
+    fig_wp_fan.add_hline(
+        y=wp_target, line_dash="dash", line_color="green", line_width=1.5,
     )
-    fig2.add_vline(
-        x=horizon, line_dash="dot", line_color="royalblue", line_width=2,
-        annotation_text=f"Your horizon: Month {horizon}",
-        annotation_position="top right",
+    fig_wp_fan.add_hline(
+        y=portfolio.total_current_value, line_dash="dot", line_color="gray", line_width=1,
     )
-    if first_month != -1:
-        fig2.add_vline(
-            x=first_month, line_dash="solid", line_color="green", line_width=1.5,
-            annotation_text=f"Earliest safe: Month {first_month}",
-            annotation_position="top left",
+    # Mark optimal exit day (string x-axis → use add_shape, not add_vline)
+    if wp_rec["optimal_day_index"] < len(wp_day_labels):
+        opt_lbl = wp_day_labels[wp_rec["optimal_day_index"]]
+        fig_wp_fan.add_shape(
+            type="line", x0=opt_lbl, x1=opt_lbl, y0=0, y1=1,
+            xref="x", yref="paper",
+            line=dict(dash="solid", color="darkorange", width=2),
         )
-    fig2.update_layout(
-        yaxis_title="P(Portfolio ≥ Target) %",
-        xaxis_title="Months from Today",
-        yaxis_range=[0, 105],
-        height=340,
+        fig_wp_fan.add_annotation(
+            x=opt_lbl, y=1.02, xref="x", yref="paper",
+            text="Optimal exit", showarrow=False,
+            font=dict(color="darkorange", size=11),
+            yanchor="bottom", xanchor="center",
+        )
+    fig_wp_fan.update_yaxes(tickformat=",.0f", tickprefix="₹")
+    fig_wp_fan.update_layout(
+        height=380, hovermode="x unified",
         margin=dict(t=30, b=20),
-        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
-    for fy_m in fy_boundaries:
-        fig2.add_vline(
-            x=fy_m, line_dash="dash", line_color="orange",
-            line_width=1, opacity=0.5,
-        )
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig_wp_fan, use_container_width=True)
 
-    # Fund split details
-    with st.expander("Fund Split Details"):
-        rows = []
-        for fn, amt in allocations.items():
-            pv = proj_at_horizon[fn]
+    st.markdown("#### Exit-Timing Ranking")
+    st.caption(
+        "Every business day between now and your deadline, scored on a "
+        "risk-adjusted basis. `score = (1-λ)·mean + λ·P10`. Upside left = "
+        "expected value on that day minus expected value today. Regret prob "
+        "= P(value on that day < value today)."
+    )
+
+    rank_rows = []
+    for r in wp_table:
+        lbl = wp_day_labels[r.day_index] if r.day_index < len(wp_day_labels) else "today"
+        rank_rows.append({
+            "Day": f"{r.day_index} · {lbl}",
+            "Median": f"₹{r.median:,.0f}",
+            "P10": f"₹{r.p10:,.0f}",
+            "P90": f"₹{r.p90:,.0f}",
+            "Upside Left": f"₹{r.upside_left_from_today:,.0f}",
+            "Regret Prob": f"{r.regret_prob_vs_today*100:.0f}%",
+            "P(≥ target)": f"{r.prob_meets_target*100:.0f}%",
+            "Score": round(r.score, 0),
+        })
+    rank_df = pd.DataFrame(rank_rows)
+
+    def _highlight(row):
+        return [
+            "background-color: #fff3cd" if row.name == wp_rec["optimal_day_index"] else ""
+            for _ in row
+        ]
+    st.dataframe(
+        rank_df.style.apply(_highlight, axis=1),
+        use_container_width=True,
+        hide_index=True,
+        height=min(400, 38 * (len(rank_df) + 1)),
+    )
+
+    with st.expander("Tax impact at optimal exit day (LTCG @ 12.5%)"):
+        opt_day = wp_rec["optimal_day_index"]
+        proj_at_opt = {
+            fn: float(short_bands[fn]["p50"][opt_day]) for fn in fund_names
+        }
+        if wp_split_mode == "Proportional to current value":
+            wp_alloc = suggest_proportional_split(portfolio, wp_target, proj_at_opt)
+        elif wp_split_mode == "All from PP Flexi Cap":
+            wp_alloc = {"Parag Parikh Flexi Cap": wp_target, "ICICI Pru Large Cap": 0.0}
+        else:
+            wp_alloc = {"Parag Parikh Flexi Cap": 0.0, "ICICI Pru Large Cap": wp_target}
+
+        tax_info = compute_portfolio_withdrawal_tax(portfolio, wp_alloc, proj_at_opt)
+        tax_rows = []
+        for fn, amt in wp_alloc.items():
+            pv = proj_at_opt[fn]
             gr = projected_gain_ratio(portfolio.fund_by_name(fn), pv)
-            rows.append({
+            tax_rows.append({
                 "Fund": fn,
                 "Withdrawal (₹)": f"₹{amt:,.0f}",
-                "Projected Value at Month": f"₹{pv:,.0f}",
+                "Projected Value at Exit": f"₹{pv:,.0f}",
                 "Gain Ratio": f"{gr*100:.1f}%",
                 "Realised Gain (₹)": f"₹{amt*gr:,.0f}",
             })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
+        st.dataframe(pd.DataFrame(tax_rows), use_container_width=True, hide_index=True)
         st.info(
             f"**Total LTCG realised:** ₹{tax_info['total_realized_gain']:,.0f}  \n"
             f"**Exemption applied:** ₹{tax_info['exemption_used']:,.0f}  \n"
             f"**Taxable gain:** ₹{tax_info['taxable_gain']:,.0f}  \n"
             f"**Tax @ 12.5%:** ₹{tax_info['total_tax']:,.0f}  \n"
-            f"**Exemption remaining after withdrawal:** ₹{tax_info['fy_exemption_remaining_after']:,.0f}"
-        )
-
-    # FY boundary tip
-    if fy_boundaries and horizon > fy_boundaries[0]:
-        fy_m = fy_boundaries[0]
-        st.info(
-            f"**FY tip:** Your horizon ({horizon} months) crosses an FY boundary at month {fy_m}. "
-            f"Consider splitting the withdrawal: one tranche before month {fy_m} "
-            f"(uses this FY's remaining ₹{portfolio.tax_state.remaining_exemption:,.0f} exemption) "
-            f"and one after (unlocks the full ₹1,25,000 fresh exemption). "
-            f"Check the Tax Impact tab for details."
+            f"**Net received:** ₹{tax_info['net_received']:,.0f}"
         )
 
 
@@ -602,7 +662,8 @@ with tab2:
 with tab3:
     st.subheader("Tax Impact Across Withdrawal Amounts & Timing")
     st.caption(
-        "Colour shows estimated LTCG tax for different withdrawal amounts at different months. "
+        "Colour shows estimated LTCG tax for different withdrawal amounts at different months, "
+        "using median projected values from the Bayesian factor model. "
         "Green = within/near ₹1.25L exemption (zero/low tax). Red = above exemption."
     )
 
@@ -700,39 +761,61 @@ with tab3:
 
 
 # ============================================================
-# TAB 4 — Scenarios
+# TAB 4 — Scenarios (Factor Regime + Fan Forecast)
 # ============================================================
 
 with tab4:
-    st.subheader("Bull / Base / Bear Scenario Trajectories")
+    st.subheader("Market Factor Regime")
     st.caption(
-        "Scenarios are derived by stratifying the posterior: "
-        "Bull = top 25% of sampled fund return rates, "
-        "Base = middle 20%, "
-        "Bear = bottom 25%."
+        "What the market looks like right now, as seen by the factor model's "
+        "inputs. These numbers condition all forecasts on this tab."
     )
 
-    SCENARIO_COLORS = {"bull": "#2ca02c", "base": "#1f77b4", "bear": "#d62728"}
-    SCENARIO_LABELS = {
-        "bull": "Bull (top 25% returns)",
-        "base": "Base (median returns)",
-        "bear": "Bear (bottom 25% returns)",
-    }
+    regime = current_factor_regime(factors_df, window=20)
+    g1, g2, g3, g4, g5 = st.columns(5)
+    g1.metric(
+        "NIFTY 20d ann. vol",
+        f"{regime['nifty_trailing_vol_20d']*100:.1f}%",
+    )
+    g2.metric("India VIX", f"{regime['vix_level']:.1f}")
+    g3.metric(
+        "USD/INR 20d",
+        f"{regime.get('usdinr_mom_20d', 0)*100:+.2f}%",
+        delta=None,
+    )
+    g4.metric("Gold 20d", f"{regime.get('gold_mom_20d', 0)*100:+.2f}%")
+    g5.metric("Crude 20d", f"{regime.get('crude_mom_20d', 0)*100:+.2f}%")
 
-    # Total portfolio fan chart
+    st.divider()
+
+    st.subheader("3-Year Fan Forecast (factor model)")
+    st.caption(
+        "10th / 50th / 90th percentile total portfolio value over the next 36 months "
+        "from 2,000 Bayesian factor-model paths. Unlike the previous stratified-quartile "
+        "scenarios, each path is a full simulation of correlated fund × factor dynamics."
+    )
+
+    b_total = long_bands["total"]
     fig4 = go.Figure()
-    for sc_name, sc_data in scenarios.items():
-        fig4.add_trace(go.Scatter(
-            x=date_labels, y=sc_data["total"],
-            mode="lines", line=dict(color=SCENARIO_COLORS[sc_name], width=2.5),
-            name=SCENARIO_LABELS[sc_name],
-            hovertemplate=f"{SCENARIO_LABELS[sc_name]}: ₹%{{y:,.0f}}<extra></extra>",
-        ))
-
+    fig4.add_trace(go.Scatter(
+        x=date_labels, y=b_total["p10"][long_month_idx],
+        mode="lines", line=dict(width=0), showlegend=False, hoverinfo="skip",
+    ))
+    fig4.add_trace(go.Scatter(
+        x=date_labels, y=b_total["p90"][long_month_idx],
+        mode="lines", line=dict(width=0),
+        fill="tonexty", fillcolor="rgba(148,103,189,0.15)",
+        name="10–90% band", hoverinfo="skip",
+    ))
+    fig4.add_trace(go.Scatter(
+        x=date_labels, y=b_total["p50"][long_month_idx],
+        mode="lines", line=dict(color="rgb(148,103,189)", width=2.5),
+        name="Median total",
+        hovertemplate="%{x}<br>Total: ₹%{y:,.0f}<extra></extra>",
+    ))
     fig4.add_hline(
         y=portfolio.total_current_value,
-        line_dash="dot", line_color="gray", line_width=1.5,
-        annotation_text="Today", annotation_position="right",
+        line_dash="dot", line_color="gray", line_width=1,
     )
     for fy_m in fy_boundaries:
         if fy_m - 1 < len(date_labels):
@@ -750,303 +833,38 @@ with tab4:
             )
     fig4.update_yaxes(tickformat=",.0f", tickprefix="₹")
     fig4.update_layout(
-        height=400, hovermode="x unified",
+        height=420, hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
         margin=dict(t=30, b=20),
     )
     st.plotly_chart(fig4, use_container_width=True)
 
-    # Snapshot table at 12, 24, 36 months
-    st.markdown("#### Portfolio Value Snapshots")
+    st.markdown("#### Milestone Snapshots")
     snap_months = [12, 24, 36]
     snap_rows = []
-    for sc_name in ["bull", "base", "bear"]:
-        row = {"Scenario": SCENARIO_LABELS[sc_name]}
+    for pct_name, pct_key in [("P10 (bear)", "p10"), ("P50 (median)", "p50"), ("P90 (bull)", "p90")]:
+        row = {"Percentile": pct_name}
+        total_p = long_bands["total"][pct_key]
         for sm in snap_months:
-            if sm <= N_MONTHS:
-                val = scenarios[sc_name]["total"][sm - 1]
-                row[f"Month {sm} ({date_labels[sm-1]})"] = f"₹{val:,.0f}"
+            bday = min(sm * 21 - 1, len(total_p) - 1)
+            row[f"Month {sm} ({long_bdays[bday].strftime('%b %Y')})"] = f"₹{total_p[bday]:,.0f}"
         snap_rows.append(row)
-
     st.dataframe(pd.DataFrame(snap_rows), use_container_width=True, hide_index=True)
 
-    # Per-fund scenario breakdown
-    st.markdown("#### Per-Fund Scenario at Month 36")
-    fund_snap_rows = []
-    for fn in fund_names:
-        row = {"Fund": fn}
-        for sc_name in ["bull", "base", "bear"]:
-            val = scenarios[sc_name][fn][-1]
-            row[SCENARIO_LABELS[sc_name]] = f"₹{val:,.0f}"
-        fund_snap_rows.append(row)
-    st.dataframe(pd.DataFrame(fund_snap_rows), use_container_width=True, hide_index=True)
-
-    # MCMC diagnostics
     with st.expander("Model Diagnostics (PyMC)"):
-        st.caption("Divergences and R-hat values from the Bayesian sampler.")
+        st.caption("Divergences and R-hat values from the factor-model sampler.")
         n_div = int(idata.sample_stats.diverging.sum())
         st.metric("MCMC Divergences", n_div, delta="0 is ideal", delta_color="inverse" if n_div > 0 else "off")
 
-        # R-hat summary
         try:
-            summary = az.summary(idata, var_names=["mu_fund", "sigma_fund", "group_mu", "group_sigma"])
-            st.dataframe(summary[["mean", "sd", "hdi_3%", "hdi_97%", "r_hat"]], use_container_width=True)
+            summary = az.summary(
+                idata,
+                var_names=["alpha", "beta", "sigma_fund", "group_alpha", "group_beta"],
+            )
+            st.dataframe(
+                summary[["mean", "sd", "hdi_3%", "hdi_97%", "r_hat"]],
+                use_container_width=True,
+            )
         except Exception:
             st.info("Run a full model refresh to see diagnostics.")
 
-
-# ============================================================
-# TAB 2b — Multi-FY Plan
-# ============================================================
-
-with tab2b:
-    st.subheader("Multi-FY Withdrawal Optimizer")
-    st.caption(
-        "Plan a large withdrawal across multiple Indian financial years to "
-        "maximise use of the ₹1,25,000 LTCG exemption per FY. The default "
-        "strategy fills each FY's exemption exactly in chronological order."
-    )
-
-    mcol_in, mcol_out = st.columns([2, 3])
-
-    with mcol_in:
-        m_target = st.number_input(
-            "Total amount to withdraw (₹)",
-            min_value=10_000.0,
-            max_value=float(portfolio.total_current_value * 3),
-            value=2_000_000.0,
-            step=50_000.0,
-            format="%.0f",
-            key="multi_fy_target",
-        )
-        m_horizon_years = st.slider(
-            "Time horizon (years)",
-            min_value=1, max_value=5, value=3,
-            key="multi_fy_horizon_years",
-        )
-        m_strategy_label = st.radio(
-            "Strategy",
-            [
-                "Tax-minimising (recommended)",
-                "Equal split across FYs",
-                "Front-loaded (this FY)",
-                "Back-loaded (last FY)",
-            ],
-            index=0,
-            key="multi_fy_strategy",
-        )
-        m_risk_aware = st.toggle(
-            "Risk-aware (use p10 instead of p50)",
-            value=False,
-            help=(
-                "If on, the optimizer assumes the pessimistic 10th-percentile "
-                "growth path. This produces a lower gain ratio and a slightly "
-                "larger zero-tax withdrawal window per FY."
-            ),
-            key="multi_fy_risk_aware",
-        )
-
-    strategy_map = {
-        "Tax-minimising (recommended)": "tax_minimizing",
-        "Equal split across FYs": "equal_split",
-        "Front-loaded (this FY)": "front_loaded",
-        "Back-loaded (last FY)": "back_loaded",
-    }
-    m_strategy = strategy_map[m_strategy_label]
-    m_horizon_months = m_horizon_years * 12
-
-    schedule = cached_multi_fy_schedule(
-        id(paths),
-        pp_inv, pp_cur, ic_inv, ic_cur, already_realized,
-        m_target, m_horizon_months, m_strategy, m_risk_aware,
-    )
-    baseline = cached_multi_fy_schedule(
-        id(paths),
-        pp_inv, pp_cur, ic_inv, ic_cur, already_realized,
-        m_target, m_horizon_months, "front_loaded", m_risk_aware,
-    )
-    tax_saved = max(0.0, baseline.total_tax - schedule.total_tax)
-
-    with mcol_out:
-        s1, s2, s3, s4 = st.columns(4)
-        s1.metric(
-            "Total Tax",
-            f"₹{schedule.total_tax:,.0f}",
-            delta=f"{schedule.effective_tax_rate*100:.2f}% effective",
-            delta_color="inverse",
-        )
-        s2.metric(
-            "Net Received",
-            f"₹{schedule.total_net:,.0f}",
-        )
-        s3.metric(
-            "Tranches",
-            f"{len(schedule.tranches)}",
-            delta=f"{m_horizon_years}-year horizon",
-        )
-        s4.metric(
-            "Tax Saved vs Single Withdrawal",
-            f"₹{tax_saved:,.0f}",
-            delta=(
-                "vs front-loaded baseline"
-                if tax_saved > 0
-                else "no savings (single tranche fits)"
-            ),
-        )
-
-        if schedule.shortfall > 0:
-            st.warning(
-                f"Could only schedule ₹{schedule.total_withdrawal:,.0f} of the "
-                f"₹{m_target:,.0f} target within {m_horizon_years} year(s). "
-                f"Shortfall: ₹{schedule.shortfall:,.0f}."
-            )
-
-    st.markdown("#### Tranche Schedule")
-    if not schedule.tranches:
-        st.info("No tranches scheduled. Adjust the target or horizon.")
-    else:
-        table_rows = []
-        for t in schedule.tranches:
-            table_rows.append({
-                "FY": t.fy_label,
-                "Date": t.date.strftime("%b %Y"),
-                "Month #": t.month_index,
-                "Amount (₹)": f"₹{t.total_amount:,.0f}",
-                "Realised Gain (₹)": f"₹{t.realized_gain:,.0f}",
-                "Taxable Gain (₹)": f"₹{t.taxable_gain:,.0f}",
-                "Tax (₹)": f"₹{t.tax:,.0f}",
-                "Net (₹)": f"₹{t.net_received:,.0f}",
-                "Exemption Used": f"{schedule.exemption_utilization.get(t.fy_label, 0)*100:.0f}%",
-            })
-        st.dataframe(
-            pd.DataFrame(table_rows),
-            use_container_width=True,
-            hide_index=True,
-        )
-
-    st.markdown("#### FY Exemption Utilisation")
-    if schedule.exemption_utilization:
-        util_labels = list(schedule.exemption_utilization.keys())
-        util_values = [
-            min(1.0, schedule.exemption_utilization[lbl]) * 100
-            for lbl in util_labels
-        ]
-        fig_util = go.Figure(go.Bar(
-            x=util_labels,
-            y=util_values,
-            marker_color=[
-                "#2ca02c" if v >= 99 else ("#ffbb33" if v >= 60 else "#aec7e8")
-                for v in util_values
-            ],
-            text=[f"{v:.0f}%" for v in util_values],
-            textposition="outside",
-            hovertemplate="%{x}<br>Exemption used: %{y:.1f}%<extra></extra>",
-        ))
-        fig_util.update_layout(
-            yaxis_title="₹1.25L Exemption Used",
-            yaxis_range=[0, 115],
-            height=320,
-            margin=dict(t=20, b=20),
-            showlegend=False,
-        )
-        fig_util.update_yaxes(ticksuffix="%")
-        st.plotly_chart(fig_util, use_container_width=True)
-
-    st.markdown("#### Withdrawal Timeline")
-    if schedule.tranches:
-        timeline_labels = [t.fy_label for t in schedule.tranches]
-        timeline_amounts = [t.total_amount for t in schedule.tranches]
-        timeline_taxes = [t.tax for t in schedule.tranches]
-
-        fig_tl = go.Figure()
-        fig_tl.add_trace(go.Bar(
-            x=timeline_labels,
-            y=[a - tx for a, tx in zip(timeline_amounts, timeline_taxes)],
-            name="Net received",
-            marker_color="#2ca02c",
-            hovertemplate="%{x}<br>Net: ₹%{y:,.0f}<extra></extra>",
-        ))
-        fig_tl.add_trace(go.Bar(
-            x=timeline_labels,
-            y=timeline_taxes,
-            name="Tax",
-            marker_color="#d62728",
-            hovertemplate="%{x}<br>Tax: ₹%{y:,.0f}<extra></extra>",
-        ))
-        for t in schedule.tranches:
-            fig_tl.add_annotation(
-                x=t.fy_label,
-                y=0,
-                xref="x", yref="paper",
-                yanchor="top", yshift=-30,
-                text=t.date.strftime("%b %Y"),
-                showarrow=False,
-                font=dict(size=10, color="gray"),
-            )
-        fig_tl.update_layout(
-            barmode="stack",
-            height=380,
-            yaxis_title="Rupees",
-            xaxis_title="Financial Year",
-            margin=dict(t=20, b=70),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        )
-        fig_tl.update_yaxes(tickformat=",.0f", tickprefix="₹")
-        st.plotly_chart(fig_tl, use_container_width=True)
-    else:
-        st.info("No timeline to display.")
-
-    with st.expander("Compare strategies side-by-side"):
-        comparison_rows = []
-        for strat_name, strat_label in [
-            ("tax_minimizing", "Tax-minimising"),
-            ("equal_split", "Equal split"),
-            ("front_loaded", "Front-loaded"),
-            ("back_loaded", "Back-loaded"),
-        ]:
-            sch = cached_multi_fy_schedule(
-                id(paths),
-                pp_inv, pp_cur, ic_inv, ic_cur, already_realized,
-                m_target, m_horizon_months, strat_name, m_risk_aware,
-            )
-            comparison_rows.append({
-                "Strategy": strat_label,
-                "Tranches": len(sch.tranches),
-                "Total Tax (₹)": f"₹{sch.total_tax:,.0f}",
-                "Net Received (₹)": f"₹{sch.total_net:,.0f}",
-                "Effective Rate": f"{sch.effective_tax_rate*100:.2f}%",
-            })
-        st.dataframe(
-            pd.DataFrame(comparison_rows),
-            use_container_width=True,
-            hide_index=True,
-        )
-        st.caption(
-            "Tax-minimising fills each FY's ₹1.25L exemption exactly in "
-            "chronological order. Front-loaded compresses everything into the "
-            "current FY (worst case for tax). Back-loaded delays the entire "
-            "withdrawal to the final FY (also worst case)."
-        )
-
-    with st.expander("How it works"):
-        st.markdown(
-            """
-**Algorithm:** Greedy fill of each FY's ₹1,25,000 LTCG exemption in
-chronological order. Because the LTCG tax rule is piecewise linear (0% below
-the exemption, 12.5% above), filling each FY exactly is a strong heuristic.
-
-**Per-FY anchor month:** the first month of each FY within the horizon. The
-projected portfolio value at that month determines the blended gain ratio
-used to compute the maximum zero-tax rupee amount for that FY.
-
-**Gain ratio drift:** because the cost basis is fixed but the projected
-value grows, the blended gain ratio increases each FY. This means the rupee
-amount that fits inside ₹1.25L of LTCG **shrinks** every year — the
-optimizer accounts for this automatically.
-
-**Risk-aware mode:** uses the 10th-percentile (pessimistic) projected value
-instead of the median. Lower projected value → lower gain ratio → larger
-zero-tax window per FY (you can withdraw slightly more rupees tax-free in
-the current FY).
-"""
-        )
