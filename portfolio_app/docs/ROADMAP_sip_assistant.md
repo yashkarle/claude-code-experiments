@@ -5,7 +5,7 @@ accumulation + decumulation assistant for an Ireland-resident NRI.*
 
 ---
 
-## ★ Source of truth (updated 2026-10-19)
+## ★ Source of truth (updated 2026-10-20)
 
 **North star:** grow household wealth in **EUR, after Irish + Indian tax**, through a
 steady monthly SIP. Short-term cash needs are kept out of market risk. The Indian
@@ -16,17 +16,33 @@ job is to tell us each month what to do, and why.
 
 | Track | Plan | Status / next action |
 |---|---|---|
-| **Monthly SIP** | v1.1 below: €1,000/mo (Yash €500 + Sanskriti €500), 31% defensive / 69% equity, 75% EUR / 25% INR | Not yet started → set up T212 Pies (both), Revolut gold/bonds, INR leg |
-| **Short-term pot** | €7,500 for Mar/Apr 2027 (€4,000) and Jul/Aug 2027 (€3,000): €4,000 T212 cash, €2,000 EUR govt bond maturing Jun–Jul 2027 (Revolut), €1,500 gold split between both (Revolut), €500 cash buffer | Not yet started → stop-loss rule on gold at ~€1,050 |
-| **Surplus cash** | Emergency fund in T212 cash, target ≈ 6 months of joint expenses | Step SIP up by ~€250 once funded and the pot has paid out (after Aug 2027) |
-| **Pension / AVC** | Existing Irish Life Empower scheme (employer). €2,500 single-premium AVC paid 28 Sep 2026 | **Claim against 2025 via myAccount by 31 Oct 2026** (~€1,000 refund) |
-| **Indian withdrawals** | Original FY25-26 / FY26-27 tranche plan (HSBC exit, ICICI trim, PP Apr + Jul 2026) | Unknown whether executed → confirm and update ledger |
+| **Monthly SIP** | €1,000/mo (Yash €500 + Sanskriti €500). Allocation v2 pending (see Decisions) | Not yet started |
+| **€7,500 pot** | Was: low-risk dated plan (€4,000 Mar/Apr 2027, €3,000 Jul/Aug 2027). Now under review for a higher-growth allocation | Pending (see Decisions) |
+| **Emergency fund** | ≈ 6 months of joint expenses, T212 cash | ✅ Done (2026-10) |
+| **Pension / AVC** | Irish Life Empower (employer scheme). €2,500 single-premium AVC paid 28 Sep 2026, separate from the €7,500 pot | ✅ Claimed via Revenue (tax credits) |
+| **Indian withdrawals** | FY25-26 / FY26-27 tranche plan (HSBC exit, ICICI trim, PP tranches) | ✅ Done. Closed out |
+
+### Holdings snapshot (2026-10-20)
+
+| Holding | Type | Ccy | Platform | Value |
+|---|---|---|---|---|
+| ICICI Prudential Large Cap Fund | Equity MF | INR | Kuvera | ₹1.36L |
+| Nippon India ETF Nifty 50 BeES | ETF | INR | Zerodha / Kite | ₹47k |
+| Nippon India ETF Nifty Next 50 Junior BeES | ETF | INR | Zerodha / Kite | ₹12k |
+| Irish Life Empower (employee, employer, AVC) | Pension | EUR | Irish Life | — |
+
+### Platforms (confirmed)
+
+- **INR:** Kuvera (mutual funds), Zerodha / Kite / smallcase (ETFs, shares), HDFC NRE/NRO.
+- **EUR:** Trading 212 (primary), Revolut (only where T212 can't: direct bonds, gold).
+- **EU UCITS ETFs are excluded** (38% exit tax + 8-year deemed disposal). Global index
+  exposure comes from the pension AVCs and INR ETFs instead.
 
 ### Decisions still open (in priority order)
 
-1. **Adviser meeting** to settle how Ireland taxes Indian funds vs Indian shares, and
-   whether domicile/naturalisation timing matters. This decides SIP rows 5–6 and
-   whether 25% INR is right at all.
+1. **Irish tax on Indian funds vs Indian shares, and naturalisation timing.** An adviser
+   meeting isn't possible, so desk research replaces it (see "Research: Irish tax on
+   INR vehicles"). This decides the INR vehicles and the INR share.
 2. **AVC vs taxable EUR equity.** The Irish Life scheme already invests AVCs in an
    Indexed World Equity Fund, with relief at ~40% at source and tax-free growth. That
    likely beats SIP row 3 (taxable ETF, 38% exit tax) for money that can be locked
@@ -43,7 +59,7 @@ Each of these, learned late, sent us back to redo earlier work:
 | **Household of two contributors** (Sanskriti) | A second recompute: per-person accounts, two CGT exemptions, spouse transfers |
 | **Real budget (€1,000, not €1.5–2k)** and a surplus-cash buffer first | One full allocation pass |
 | **Cash-need dates** (Mar/Apr €4k, Jul/Aug €3k) | A generic 12-month split that had to be redone |
-| **Accounts actually held** (T212, Revolut, Scripbox, HDFC NRE/NRO; Zerodha unconfirmed) | Researching platforms that turned out not to apply |
+| **Accounts actually held** (T212, Revolut, Kuvera, Zerodha/Kite/smallcase, HDFC NRE/NRO) | Researching platforms that turned out not to apply |
 | **"Gold" meant price exposure via the apps**, not bars | The early bullion-spread discussion |
 | **Goal hierarchy**: accumulate in EUR (main), withdraw from India (secondary), short-term liquidity (constraint) | The app was built withdrawal-first, then extended. Building in this order would have shaped the data model (household ledger, both tax years) from the start |
 
