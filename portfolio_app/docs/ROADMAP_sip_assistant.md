@@ -16,8 +16,8 @@ job is to tell us each month what to do, and why.
 
 | Track | Plan | Status / next action |
 |---|---|---|
-| **Monthly SIP** | €1,000/mo (Yash €500 + Sanskriti €500). Allocation v2 pending (see Decisions) | Not yet started |
-| **€7,500 pot** | Was: low-risk dated plan (€4,000 Mar/Apr 2027, €3,000 Jul/Aug 2027). Now under review for a higher-growth allocation | Pending (see Decisions) |
+| **Monthly SIP** | **Allocation v2** (below): €1,000/mo, Yash €500 + Sanskriti €500 | Not yet started → set up T212, Zerodha baskets, quarterly Revolut top-ups |
+| **€7,500 lump sum** | **Allocation v2**, full growth. The Mar/Apr and Jul/Aug 2027 needs are now covered by the emergency fund. Deploy in 3 tranches, Oct–Dec 2026 | Not yet started |
 | **Emergency fund** | ≈ 6 months of joint expenses, T212 cash | ✅ Done (2026-10) |
 | **Pension / AVC** | Irish Life Empower (employer scheme). €2,500 single-premium AVC paid 28 Sep 2026, separate from the €7,500 pot | ✅ Claimed via Revenue (tax credits) |
 | **Indian withdrawals** | FY25-26 / FY26-27 tranche plan (HSBC exit, ICICI trim, PP tranches) | ✅ Done. Closed out |
@@ -40,13 +40,22 @@ job is to tell us each month what to do, and why.
 
 ### Decisions still open (in priority order)
 
-1. **Irish tax on Indian funds vs Indian shares, and naturalisation timing.** An adviser
-   meeting isn't possible, so desk research replaces it (see "Research: Irish tax on
-   INR vehicles"). This decides the INR vehicles and the INR share.
-2. **AVC vs taxable EUR equity.** The Irish Life scheme already invests AVCs in an
-   Indexed World Equity Fund, with relief at ~40% at source and tax-free growth. That
-   likely beats SIP row 3 (taxable ETF, 38% exit tax) for money that can be locked
-   until retirement. Decide the split between liquid and locked money.
+1. ~~Irish tax on Indian funds vs shares~~ **Answered by desk research**
+   ([research_irish_tax_inr_vehicles.md](research_irish_tax_inr_vehicles.md)).
+   Indian MFs/ETFs ≈ 52% Irish income tax, no loss relief. Indian direct shares at 31%
+   CGT. Result: new INR money goes to direct-share baskets only.
+2. **Compliance check (urgent):** existing Indian MF/ETF holdings and any 2025 Indian
+   fund disposals likely make you a chargeable person, so you need a **Form 11**, not
+   just the myAccount return. 2025 deadline: 31 Oct 2026, or mid-Nov if filed *and*
+   paid on ROS.
+3. **Domicile before naturalisation:** a one-off written opinion (async, by email) on
+   whether you are non-domiciled today, and whether to reset Indian MF/ETF gains before
+   naturalising.
+4. **AVC vs liquid EUR equity:** AVCs get 40% relief and tax-free growth, and you have
+   large headroom under the 20% limit. Decide how much of the SIP to lock until
+   retirement.
+5. **1 Jul 2027 review:** the Savings & Investment Account (€12k/yr each, tax-free
+   inside, 1% levy above €50k) may make EU ETFs the best liquid vehicle.
 
 ### What we'd have wanted to know on day 1 (intake checklist)
 
@@ -61,6 +70,7 @@ Each of these, learned late, sent us back to redo earlier work:
 | **Cash-need dates** (Mar/Apr €4k, Jul/Aug €3k) | A generic 12-month split that had to be redone |
 | **Accounts actually held** (T212, Revolut, Kuvera, Zerodha/Kite/smallcase, HDFC NRE/NRO) | Researching platforms that turned out not to apply |
 | **"Gold" meant price exposure via the apps**, not bars | The early bullion-spread discussion |
+| **"Tax-efficient" claims must be tested in the residence country first** (Indian ETFs looked efficient in India, ~52% in Ireland) | Allocation v1/v1.1 sleeves that had to be swapped for direct shares |
 | **Goal hierarchy**: accumulate in EUR (main), withdraw from India (secondary), short-term liquidity (constraint) | The app was built withdrawal-first, then extended. Building in this order would have shaped the data model (household ledger, both tax years) from the start |
 
 Use this as the intake checklist for any future change: **residency/domicile, household,
@@ -111,9 +121,12 @@ rate, the INR buckets become much less attractive, and the whole allocation chan
 
 - `tax_rules/ireland.yaml`, `tax_rules/india.yaml`: rates, exemptions, sources, `verified_on`.
   - **Ireland** (tax year = **calendar year**):
-    - CGT 33%, €1,270 annual exemption, losses can be offset.
-    - EU/EEA UCITS ETFs and funds: exit tax 38% from 1 Jan 2026, 8-year deemed
-      disposal, no loss offset.
+    - CGT 31% from 7 Oct 2026 (was 33%), €1,270 annual exemption, losses can be offset
+      and transferred between spouses.
+    - EU/EEA UCITS ETFs and funds: exit tax 38% in 2026, 35% from 1 Jan 2027, 8-year
+      deemed disposal, no loss offset.
+    - Non-EU/EEA/OECD funds (Indian MFs **and** NSE ETFs): Case IV income at the
+      marginal rate + USC + PRSI (~52%), no loss relief, no 8-year deemed disposal.
     - DIRT 33% on deposit interest.
     - Irish government bond gains are CGT-exempt (s.607 TCA). Coupons are taxed at
       the marginal rate plus USC and PRSI.
@@ -272,7 +285,7 @@ sense after Irish tax. The backtester needs no new modelling and reuses the exis
 
 ---
 
-## Target allocation v1 (input to the Phase 2 allocator)
+## Target allocation v1 *(superseded by v2)*
 
 *Agreed 2026-10-03. Age 31 → 31% defensive / 69% equity. Percentages are of each
 monthly SIP (€1,500–2,000), so the amounts scale with the budget. When the budget
@@ -292,7 +305,7 @@ underweight, rather than being spread pro-rata.*
 
 INR sleeves (5 + 6 = 25%) are remitted to NRE **quarterly** to reduce FX and transfer fees.
 
-### v1.1 — starting budget €1,000/month, two contributors (2026-10-03)
+### v1.1 — starting budget €1,000/month, two contributors (2026-10-03) *(superseded by v2)*
 
 Same percentages as v1, at €1,000/month: Yash €500 + Sanskriti €500. INR sleeves stay
 in Yash's name (existing NRE/Scripbox/Zerodha accounts). Each spouse holds some
@@ -313,3 +326,61 @@ Transfers between spouses are CGT-free.
 of choice. Plan on the assumption that **no remittance basis** applies (worldwide gains
 taxed as they arise). The ledger and profile need a `household` level with
 per-person accounts and per-person CGT exemptions.
+
+---
+
+## Target allocation v2 (2026-10-20): current
+
+**Principle** (by volatility; age 31):
+
+| Bucket | Rule | % |
+|---|---|---|
+| Low | 10% fixed | 10 |
+| Medium | (age − 10)% | 21 |
+| High | (100 − age)% | 69 |
+
+**Changes from v1.1:**
+- No EU UCITS ETFs (exit tax).
+- No new Indian MFs or ETFs (~52% Irish tax). The user's preferred INR vehicles are
+  swapped for Zerodha direct-share baskets with the same exposure.
+- INR is held at ~20% as a deliberate diversifier.
+
+| # | Bucket | Sleeve | Ccy | Platform | Owner | % | €/mo SIP | € lump sum | Irish tax | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Low | EUR govt bonds (Irish where listed, 2–5 yr) | EUR | Revolut Bonds | Both | 5 | 50 | 375 | Irish govt: gain CGT-free, coupon income. Others: CGT 31% | SIP: hold in T212 cash, buy quarterly (€150) |
+| 2 | Low | Gold price exposure | EUR (USD-priced) | Revolut Commodities | Both | 5 | 50 | 375 | CGT 31%, €1,270 each | Quarterly. Avoid T212 gold ETCs until their classification is checked |
+| 3 | Medium | Global generalist investment trusts (e.g. F&C, Alliance Witan) | GBP | T212 | Both | 11 | 110 | 825 | Likely CGT 31% (unresolved) | Check each ticker is buyable on T212 EU (KID) |
+| 4 | Medium | INR large-cap basket (top Nifty 50 names) replacing new Nifty/Next 50 ETF buys | INR | Zerodha smallcase / Kite | Yash | 10 | 100 | 750 | CGT 31%, Indian LTCG credited | Remit quarterly (~₹32k) |
+| 5 | High | EUR/US direct stocks, 15–25 names over time | EUR/USD | T212 | Both | 59 | 590 | 4,425 | CGT 31%, losses usable | Sector tilt below |
+| 6 | High | INR mid/small/micro basket (60/30/10) | INR | Zerodha smallcase / Kite | Yash | 10 | 100 | 750 | CGT 31% | Remit quarterly with row 4 |
+| | | **Total** | 80% EUR / 20% INR | | | **100** | **1,000** | **7,500** | | |
+
+**SIP by person:**
+- **Yash €500:** rows 1+2 €50, row 3 €55, rows 4+6 €200, row 5 €195.
+- **Sanskriti €500:** rows 1+2 €50, row 3 €55, row 5 €395.
+
+**Lump sum:**
+- Yash's money.
+- Gift up to half of rows 1–3 and 5 to Sanskriti (spouse transfers are CGT-free) so
+  that both €1,270 CGT exemptions get used.
+- Deploy in thirds: Oct, Nov and Dec 2026.
+
+**Existing holdings** (ICICI Large Cap MF, Nifty BeES, Junior BeES):
+- Hold, and put no new money in.
+- Selling them triggers ~52% Irish tax on the gain.
+- Declare them on Form 11.
+
+**Diversification targets** (liquid equity, rows 3–6):
+- **Market cap:** large ≈ 65%, mid ≈ 20%, small ≈ 12%, micro ≤ 3%.
+- **Sectors:** INR baskets are ~30–35% financial services. Row 5 offsets this by
+  underweighting financials (≤ 10%) and spreading across:
+  - industrials
+  - healthcare
+  - technology
+  - consumer cyclical/defensive
+  - basic materials
+  - energy/utilities
+
+  Target: no single sector above 25% of liquid equity.
+- The Phase 2 allocator will optimise these splits from posterior draws. Until then,
+  they are fixed guide rails.
